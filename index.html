@@ -121,6 +121,7 @@
             <th class="text-left text-xs font-semibold text-gray-500 px-4 py-3">Status</th>
             <th class="text-left text-xs font-semibold text-gray-500 px-4 py-3">Type</th>
             <th class="text-left text-xs font-semibold text-gray-500 px-4 py-3">URL</th>
+            <th class="text-left text-xs font-semibold text-gray-500 px-4 py-3">Remarks</th>
             <th class="text-left text-xs font-semibold text-gray-500 px-4 py-3">Added By</th>
             <th class="text-left text-xs font-semibold text-gray-500 px-4 py-3">Updated</th>
             <th class="text-xs font-semibold text-gray-500 px-4 py-3"></th>
@@ -176,6 +177,10 @@
         <div>
           <label class="block text-xs font-semibold text-gray-600 mb-1">Thumbnail URL</label>
           <input id="formThumb" type="url" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand" placeholder="https://...screenshot.png">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Remarks</label>
+          <textarea id="formRemarks" rows="2" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand resize-none" placeholder="Tech stack, notes, anything to remember..."></textarea>
         </div>
         <div>
           <label class="block text-xs font-semibold text-gray-600 mb-1">Added By</label>
@@ -271,6 +276,7 @@
           const q = searchQuery.toLowerCase();
           return (p.name || '').toLowerCase().includes(q) ||
                  (p.description || '').toLowerCase().includes(q) ||
+                 (p.remarks || '').toLowerCase().includes(q) ||
                  (p.created_by || '').toLowerCase().includes(q);
         }
         return true;
@@ -329,7 +335,8 @@
               <span class="status-${p.status} text-[10px] sm:text-xs font-semibold px-2 py-0.5 rounded-full">${statusLabel(p.status)}</span>
               <span class="type-${p.type} text-[10px] sm:text-xs font-semibold px-2 py-0.5 rounded-full">${typeLabel(p.type)}</span>
             </div>
-            ${p.live_url ? `<a href="${escapeHtml(p.live_url)}" target="_blank" rel="noopener" class="mt-3 inline-flex items-center gap-1 text-xs text-brand font-semibold hover:underline">
+            ${p.remarks ? `<p class="mt-2 text-[10px] text-gray-400 italic line-clamp-2">${escapeHtml(p.remarks)}</p>` : ''}
+            ${p.live_url ? `<a href="${escapeHtml(p.live_url)}" target="_blank" rel="noopener" class="mt-2 inline-flex items-center gap-1 text-xs text-brand font-semibold hover:underline">
               <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
               Visit
             </a>` : ''}
@@ -352,6 +359,7 @@
           <td class="px-4 py-3"><span class="status-${p.status} text-xs font-semibold px-2 py-0.5 rounded-full">${statusLabel(p.status)}</span></td>
           <td class="px-4 py-3"><span class="type-${p.type} text-xs font-semibold px-2 py-0.5 rounded-full">${typeLabel(p.type)}</span></td>
           <td class="px-4 py-3">${p.live_url ? `<a href="${escapeHtml(p.live_url)}" target="_blank" rel="noopener" class="text-xs text-brand hover:underline truncate block max-w-[180px]">${escapeHtml(p.live_url.replace('https://', ''))}</a>` : '<span class="text-xs text-gray-300">—</span>'}</td>
+          <td class="px-4 py-3 text-xs text-gray-400 italic max-w-[200px] truncate" title="${escapeHtml(p.remarks || '')}">${escapeHtml(p.remarks || '—')}</td>
           <td class="px-4 py-3 text-xs text-gray-500">${escapeHtml(p.created_by || '—')}</td>
           <td class="px-4 py-3 text-xs text-gray-400">${timeAgo(p.updated_at)}</td>
           <td class="px-4 py-3">
@@ -413,6 +421,7 @@
       document.getElementById('formType').value = p.type || 'others';
       document.getElementById('formUrl').value = p.live_url || '';
       document.getElementById('formThumb').value = p.thumbnail_url || '';
+      document.getElementById('formRemarks').value = p.remarks || '';
       document.getElementById('formCreatedBy').value = p.created_by || '';
       document.getElementById('modalOverlay').classList.add('active');
     }
@@ -451,6 +460,7 @@
         type: document.getElementById('formType').value,
         live_url: document.getElementById('formUrl').value.trim() || null,
         thumbnail_url: document.getElementById('formThumb').value.trim() || null,
+        remarks: document.getElementById('formRemarks').value.trim() || null,
         created_by: document.getElementById('formCreatedBy').value.trim() || null,
       };
       try {
