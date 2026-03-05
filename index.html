@@ -55,6 +55,37 @@
 </head>
 <body class="bg-gray-50 min-h-screen">
 
+  <!-- Auth Screen -->
+  <div id="authScreen" class="min-h-screen flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-sm p-8 border border-gray-200 shadow-sm">
+      <div class="flex items-center gap-3 mb-6">
+        <div class="w-10 h-10 bg-brand rounded-lg flex items-center justify-center">
+          <span class="text-white font-bold text-xl">U</span>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold text-gray-900">Utopia Dashboard</h1>
+          <p class="text-xs text-gray-500">Sign in or register to continue</p>
+        </div>
+      </div>
+      <form id="authForm" class="space-y-3" onsubmit="handleAuth(event)">
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Username</label>
+          <input id="authUsername" type="text" required class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand" placeholder="Your name" autocomplete="username">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Password</label>
+          <input id="authPassword" type="password" required minlength="4" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand" placeholder="Min 4 characters" autocomplete="current-password">
+        </div>
+        <p id="authError" class="text-xs text-red-500 hidden"></p>
+        <button type="submit" class="w-full bg-brand hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors">Sign In / Register</button>
+        <p class="text-[10px] text-gray-400 text-center">New username? We'll create your account automatically.</p>
+      </form>
+    </div>
+  </div>
+
+  <!-- Dashboard (hidden until logged in) -->
+  <div id="dashboardApp" class="hidden">
+
   <!-- Header -->
   <header class="bg-white border-b border-gray-200 sticky top-0 z-40">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
@@ -69,6 +100,15 @@
       </div>
       <div class="flex items-center gap-3">
         <span id="projectCount" class="text-sm text-gray-500 hidden sm:block"></span>
+        <div class="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-1.5">
+          <div class="w-6 h-6 bg-brand/10 rounded-full flex items-center justify-center">
+            <span id="userInitial" class="text-xs font-bold text-brand"></span>
+          </div>
+          <span id="userName" class="text-xs font-semibold text-gray-700 hidden sm:block"></span>
+          <button onclick="logout()" class="text-gray-400 hover:text-red-500 ml-1" title="Sign out">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+          </button>
+        </div>
         <button onclick="openModal()" class="bg-cta hover:bg-fuchsia-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors">
           + Add Project
         </button>
@@ -188,10 +228,7 @@
           <label class="block text-xs font-semibold text-gray-600 mb-1">Remarks</label>
           <textarea id="formRemarks" rows="2" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand resize-none" placeholder="Tech stack, notes, anything to remember..."></textarea>
         </div>
-        <div>
-          <label class="block text-xs font-semibold text-gray-600 mb-1">Added By</label>
-          <input id="formCreatedBy" type="text" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand" placeholder="Your name">
-        </div>
+        <input type="hidden" id="formCreatedBy">
         <div class="flex gap-2 pt-2">
           <button type="button" onclick="closeModal()" class="flex-1 border border-gray-200 text-gray-600 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors">Cancel</button>
           <button type="submit" class="flex-1 bg-brand hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors">Save Project</button>
@@ -199,6 +236,8 @@
       </form>
     </div>
   </div>
+
+  </div><!-- end dashboardApp -->
 
   <!-- Delete Confirmation Modal -->
   <div id="deleteOverlay" class="modal-overlay fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onclick="if(event.target===this)closeDeleteModal()">
@@ -227,6 +266,80 @@
     let searchQuery = '';
     let deleteTargetId = null;
     let selectedIds = new Set();
+    let currentUser = null;
+
+    // ─── Auth ───
+    async function hashPassword(pw) {
+      const data = new TextEncoder().encode(pw);
+      const hash = await crypto.subtle.digest('SHA-256', data);
+      return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    async function handleAuth(e) {
+      e.preventDefault();
+      const username = document.getElementById('authUsername').value.trim();
+      const password = document.getElementById('authPassword').value;
+      const errorEl = document.getElementById('authError');
+      errorEl.classList.add('hidden');
+
+      if (!username || !password) return;
+      const pwHash = await hashPassword(password);
+
+      try {
+        // Check if user exists
+        const existing = await supaFetch(`dashboard_users?username=eq.${encodeURIComponent(username)}&select=id,username,password_hash`);
+        if (existing && existing.length > 0) {
+          // Login — verify password
+          if (existing[0].password_hash !== pwHash) {
+            errorEl.textContent = 'Wrong password.';
+            errorEl.classList.remove('hidden');
+            return;
+          }
+          currentUser = { id: existing[0].id, username: existing[0].username };
+        } else {
+          // Register — create new user
+          const created = await supaFetch('dashboard_users', {
+            method: 'POST',
+            body: JSON.stringify({ username, password_hash: pwHash }),
+          });
+          currentUser = { id: created[0].id, username: created[0].username };
+        }
+        localStorage.setItem('dashboard_user', JSON.stringify(currentUser));
+        showDashboard();
+      } catch (err) {
+        errorEl.textContent = 'Error: ' + err.message;
+        errorEl.classList.remove('hidden');
+      }
+    }
+
+    function showDashboard() {
+      document.getElementById('authScreen').classList.add('hidden');
+      document.getElementById('dashboardApp').classList.remove('hidden');
+      document.getElementById('userInitial').textContent = currentUser.username[0].toUpperCase();
+      document.getElementById('userName').textContent = currentUser.username;
+      loadProjects();
+    }
+
+    function logout() {
+      localStorage.removeItem('dashboard_user');
+      currentUser = null;
+      document.getElementById('dashboardApp').classList.add('hidden');
+      document.getElementById('authScreen').classList.remove('hidden');
+      document.getElementById('authForm').reset();
+    }
+
+    // Check saved session on load
+    function checkSession() {
+      const saved = localStorage.getItem('dashboard_user');
+      if (saved) {
+        try {
+          currentUser = JSON.parse(saved);
+          showDashboard();
+          return;
+        } catch {}
+      }
+      document.getElementById('authScreen').classList.remove('hidden');
+    }
 
     // ─── Supabase REST ───
     async function supaFetch(path, options = {}) {
@@ -476,6 +589,7 @@
       document.getElementById('editId').value = '';
       document.getElementById('modalTitle').textContent = 'Add Project';
       document.getElementById('projectForm').reset();
+      document.getElementById('formCreatedBy').value = currentUser ? currentUser.username : '';
       document.getElementById('modalOverlay').classList.add('active');
     }
 
@@ -585,7 +699,7 @@
       if (e.key === 'Escape') { closeModal(); closeDeleteModal(); }
     });
 
-    loadProjects();
+    checkSession();
   </script>
 </body>
 </html>
