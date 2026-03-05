@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Utopia Dashboard | Project Tracker</title>
+  <meta name="description" content="Internal project dashboard for Utopia Ventures — track all projects, statuses, and deployments.">
+  <meta property="og:title" content="Utopia Dashboard | Project Tracker">
+  <meta property="og:description" content="Track all Utopia Ventures projects in one place.">
+  <meta property="og:type" content="website">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>U</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ['Bricolage Grotesque', 'sans-serif'],
+            body: ['Plus Jakarta Sans', 'sans-serif'],
+          },
+          colors: {
+            brand: '#116dff',
+            cta: '#d946ef',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    h1, h2, h3 { font-family: 'Bricolage Grotesque', sans-serif; }
+    .card { transition: transform 0.2s ease, opacity 0.2s ease; }
+    .card:hover { transform: translateY(-2px); }
+    .status-live { background: #dcfce7; color: #166534; }
+    .status-in_progress { background: #fef3c7; color: #92400e; }
+    .status-abandoned { background: #fee2e2; color: #991b1b; }
+    .type-internal_software { background: #dbeafe; color: #1e40af; }
+    .type-saas_software { background: #f3e8ff; color: #7c3aed; }
+    .type-landing_page { background: #fce7f3; color: #be185d; }
+    .type-others { background: #f1f5f9; color: #475569; }
+    .modal-overlay { opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
+    .modal-overlay.active { opacity: 1; pointer-events: auto; }
+    .filter-btn.active { background: #116dff; color: white; }
+    .view-btn.active { background: #f1f5f9; }
+    /* Thumbnail placeholder */
+    .thumb-placeholder {
+      background: linear-gradient(135deg, #e0e7ff 0%, #f0e6ff 100%);
+      display: flex; align-items: center; justify-content: center;
+    }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+  <!-- Header -->
+  <header class="bg-white border-b border-gray-200 sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 bg-brand rounded-lg flex items-center justify-center">
+          <span class="text-white font-bold text-lg">U</span>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold text-gray-900 leading-tight">Utopia Dashboard</h1>
+          <p class="text-xs text-gray-500">Project Tracker</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <span id="projectCount" class="text-sm text-gray-500 hidden sm:block"></span>
+        <button onclick="openModal()" class="bg-cta hover:bg-fuchsia-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors">
+          + Add Project
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Filters & View Toggle -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <!-- Status Filters -->
+      <div class="flex flex-wrap gap-2" id="statusFilters">
+        <button class="filter-btn active px-3 py-1.5 rounded-full text-xs font-semibold border border-gray-200 transition-colors" data-filter="all">All</button>
+        <button class="filter-btn px-3 py-1.5 rounded-full text-xs font-semibold border border-gray-200 transition-colors" data-filter="live">Live</button>
+        <button class="filter-btn px-3 py-1.5 rounded-full text-xs font-semibold border border-gray-200 transition-colors" data-filter="in_progress">In Progress</button>
+        <button class="filter-btn px-3 py-1.5 rounded-full text-xs font-semibold border border-gray-200 transition-colors" data-filter="abandoned">Abandoned</button>
+      </div>
+      <div class="flex items-center gap-2">
+        <!-- Type Filter -->
+        <select id="typeFilter" class="text-xs border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-600 font-medium">
+          <option value="all">All Types</option>
+          <option value="internal_software">Internal Software</option>
+          <option value="saas_software">SaaS Software</option>
+          <option value="landing_page">Landing Page</option>
+          <option value="others">Others</option>
+        </select>
+        <!-- Search -->
+        <input id="searchInput" type="text" placeholder="Search..." class="text-xs border border-gray-200 rounded-lg px-3 py-1.5 w-32 sm:w-40">
+        <!-- View Toggle -->
+        <div class="flex border border-gray-200 rounded-lg overflow-hidden">
+          <button class="view-btn active p-1.5" data-view="grid" title="Grid view">
+            <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+          </button>
+          <button class="view-btn p-1.5" data-view="table" title="Table view">
+            <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Grid View -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 pb-12">
+    <div id="gridView" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <!-- Cards injected here -->
+    </div>
+    <div id="tableView" class="hidden overflow-x-auto">
+      <table class="w-full bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <thead class="bg-gray-50 border-b border-gray-200">
+          <tr>
+            <th class="text-left text-xs font-semibold text-gray-500 px-4 py-3">Project</th>
+            <th class="text-left text-xs font-semibold text-gray-500 px-4 py-3">Status</th>
+            <th class="text-left text-xs font-semibold text-gray-500 px-4 py-3">Type</th>
+            <th class="text-left text-xs font-semibold text-gray-500 px-4 py-3">URL</th>
+            <th class="text-left text-xs font-semibold text-gray-500 px-4 py-3">Added By</th>
+            <th class="text-left text-xs font-semibold text-gray-500 px-4 py-3">Updated</th>
+            <th class="text-xs font-semibold text-gray-500 px-4 py-3"></th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <!-- Rows injected here -->
+        </tbody>
+      </table>
+    </div>
+    <div id="emptyState" class="hidden text-center py-16">
+      <p class="text-gray-400 text-sm">No projects found.</p>
+    </div>
+  </main>
+
+  <!-- Add/Edit Modal -->
+  <div id="modalOverlay" class="modal-overlay fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onclick="if(event.target===this)closeModal()">
+    <div class="bg-white rounded-2xl w-full max-w-md p-6 relative">
+      <h2 id="modalTitle" class="text-lg font-bold text-gray-900 mb-4">Add Project</h2>
+      <form id="projectForm" class="space-y-3" onsubmit="handleSubmit(event)">
+        <input type="hidden" id="editId">
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Project Name *</label>
+          <input id="formName" type="text" required class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand" placeholder="e.g. BankMatch">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Description</label>
+          <textarea id="formDesc" rows="2" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand resize-none" placeholder="Short description of the project"></textarea>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Status *</label>
+            <select id="formStatus" required class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand">
+              <option value="in_progress">In Progress</option>
+              <option value="live">Live</option>
+              <option value="abandoned">Abandoned</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Type *</label>
+            <select id="formType" required class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand">
+              <option value="saas_software">SaaS Software</option>
+              <option value="internal_software">Internal Software</option>
+              <option value="landing_page">Landing Page</option>
+              <option value="others">Others</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Live URL</label>
+          <input id="formUrl" type="url" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand" placeholder="https://example.vercel.app">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Thumbnail URL</label>
+          <input id="formThumb" type="url" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand" placeholder="https://...screenshot.png">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Added By</label>
+          <input id="formCreatedBy" type="text" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand" placeholder="Your name">
+        </div>
+        <div class="flex gap-2 pt-2">
+          <button type="button" onclick="closeModal()" class="flex-1 border border-gray-200 text-gray-600 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors">Cancel</button>
+          <button type="submit" class="flex-1 bg-brand hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors">Save Project</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div id="deleteOverlay" class="modal-overlay fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onclick="if(event.target===this)closeDeleteModal()">
+    <div class="bg-white rounded-2xl w-full max-w-sm p-6 text-center">
+      <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+        <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+      </div>
+      <h3 class="font-bold text-gray-900 mb-1">Delete Project?</h3>
+      <p class="text-sm text-gray-500 mb-4">This action cannot be undone.</p>
+      <div class="flex gap-2">
+        <button onclick="closeDeleteModal()" class="flex-1 border border-gray-200 text-gray-600 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors">Cancel</button>
+        <button onclick="confirmDelete()" class="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ─── Supabase Config ───
+    const SUPABASE_URL = 'https://ippkrnjcmntcmrryfybr.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlwcGtybmpjbW50Y21ycnlmeWJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0MzAzNzMsImV4cCI6MjA4ODAwNjM3M30._oHSGBP2UH_XnuAEov0s50Kg3gbAw7x77aArlp_AYAI';
+    const TABLE = 'dashboard_projects';
+
+    let projects = [];
+    let currentView = 'grid';
+    let currentStatusFilter = 'all';
+    let currentTypeFilter = 'all';
+    let searchQuery = '';
+    let deleteTargetId = null;
+
+    // ─── Supabase REST helpers ───
+    async function supaFetch(path, options = {}) {
+      const url = `${SUPABASE_URL}/rest/v1/${path}`;
+      const headers = {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': options.prefer || 'return=representation',
+      };
+      const res = await fetch(url, { ...options, headers: { ...headers, ...options.headers } });
+      if (!res.ok) {
+        const err = await res.text();
+        throw new Error(`Supabase error: ${res.status} ${err}`);
+      }
+      const text = await res.text();
+      return text ? JSON.parse(text) : null;
+    }
+
+    async function loadProjects() {
+      try {
+        const data = await supaFetch(`${TABLE}?order=updated_at.desc`);
+        projects = data || [];
+      } catch (e) {
+        console.error('Failed to load projects:', e);
+        projects = [];
+      }
+      render();
+    }
+
+    async function saveProject(project) {
+      if (project.id) {
+        const { id, created_at, ...update } = project;
+        await supaFetch(`${TABLE}?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify(update) });
+      } else {
+        const { id, ...insert } = project;
+        await supaFetch(TABLE, { method: 'POST', body: JSON.stringify(insert) });
+      }
+      await loadProjects();
+    }
+
+    async function deleteProject(id) {
+      await supaFetch(`${TABLE}?id=eq.${id}`, { method: 'DELETE' });
+      await loadProjects();
+    }
+
+    // ─── Rendering ───
+    function getFiltered() {
+      return projects.filter(p => {
+        if (currentStatusFilter !== 'all' && p.status !== currentStatusFilter) return false;
+        if (currentTypeFilter !== 'all' && p.type !== currentTypeFilter) return false;
+        if (searchQuery) {
+          const q = searchQuery.toLowerCase();
+          return (p.name || '').toLowerCase().includes(q) ||
+                 (p.description || '').toLowerCase().includes(q) ||
+                 (p.created_by || '').toLowerCase().includes(q);
+        }
+        return true;
+      });
+    }
+
+    function statusLabel(s) {
+      return { live: 'Live', in_progress: 'In Progress', abandoned: 'Abandoned' }[s] || s;
+    }
+
+    function typeLabel(t) {
+      return { internal_software: 'Internal', saas_software: 'SaaS', landing_page: 'Landing Page', others: 'Others' }[t] || t;
+    }
+
+    function timeAgo(date) {
+      if (!date) return '';
+      const diff = Date.now() - new Date(date).getTime();
+      const mins = Math.floor(diff / 60000);
+      if (mins < 60) return `${mins}m ago`;
+      const hrs = Math.floor(mins / 60);
+      if (hrs < 24) return `${hrs}h ago`;
+      const days = Math.floor(hrs / 24);
+      if (days < 30) return `${days}d ago`;
+      return new Date(date).toLocaleDateString('en-MY', { day: 'numeric', month: 'short' });
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function renderCard(p) {
+      const thumb = p.thumbnail_url
+        ? `<img src="${escapeHtml(p.thumbnail_url)}" alt="${escapeHtml(p.name)}" class="w-full h-36 object-cover rounded-t-xl" onerror="this.parentElement.innerHTML='<div class=\\'thumb-placeholder w-full h-36 rounded-t-xl\\'><span class=\\'text-3xl font-bold text-brand/30\\'>${escapeHtml(p.name?.[0] || 'U')}</span></div>'">`
+        : `<div class="thumb-placeholder w-full h-36 rounded-t-xl"><span class="text-3xl font-bold text-brand/30">${escapeHtml(p.name?.[0] || 'U')}</span></div>`;
+
+      return `
+        <div class="card bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          ${thumb}
+          <div class="p-4">
+            <div class="flex items-start justify-between mb-2">
+              <h3 class="font-bold text-gray-900 text-sm leading-tight">${escapeHtml(p.name)}</h3>
+              <div class="flex gap-1 ml-2 shrink-0">
+                <button onclick="openEditModal('${p.id}')" class="text-gray-400 hover:text-brand p-1" title="Edit">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                </button>
+                <button onclick="openDeleteModal('${p.id}')" class="text-gray-400 hover:text-red-500 p-1" title="Delete">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                </button>
+              </div>
+            </div>
+            <p class="text-xs text-gray-500 mb-3 line-clamp-2">${escapeHtml(p.description || 'No description')}</p>
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="status-${p.status} text-[10px] sm:text-xs font-semibold px-2 py-0.5 rounded-full">${statusLabel(p.status)}</span>
+              <span class="type-${p.type} text-[10px] sm:text-xs font-semibold px-2 py-0.5 rounded-full">${typeLabel(p.type)}</span>
+            </div>
+            ${p.live_url ? `<a href="${escapeHtml(p.live_url)}" target="_blank" rel="noopener" class="mt-3 inline-flex items-center gap-1 text-xs text-brand font-semibold hover:underline">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+              Visit
+            </a>` : ''}
+            <div class="mt-2 flex items-center justify-between text-[10px] text-gray-400">
+              <span>${escapeHtml(p.created_by || '')}</span>
+              <span>${timeAgo(p.updated_at)}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderRow(p) {
+      return `
+        <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+          <td class="px-4 py-3">
+            <div class="font-semibold text-sm text-gray-900">${escapeHtml(p.name)}</div>
+            <div class="text-xs text-gray-500 truncate max-w-[200px]">${escapeHtml(p.description || '')}</div>
+          </td>
+          <td class="px-4 py-3"><span class="status-${p.status} text-xs font-semibold px-2 py-0.5 rounded-full">${statusLabel(p.status)}</span></td>
+          <td class="px-4 py-3"><span class="type-${p.type} text-xs font-semibold px-2 py-0.5 rounded-full">${typeLabel(p.type)}</span></td>
+          <td class="px-4 py-3">${p.live_url ? `<a href="${escapeHtml(p.live_url)}" target="_blank" rel="noopener" class="text-xs text-brand hover:underline truncate block max-w-[180px]">${escapeHtml(p.live_url.replace('https://', ''))}</a>` : '<span class="text-xs text-gray-300">—</span>'}</td>
+          <td class="px-4 py-3 text-xs text-gray-500">${escapeHtml(p.created_by || '—')}</td>
+          <td class="px-4 py-3 text-xs text-gray-400">${timeAgo(p.updated_at)}</td>
+          <td class="px-4 py-3">
+            <div class="flex gap-1">
+              <button onclick="openEditModal('${p.id}')" class="text-gray-400 hover:text-brand p-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button>
+              <button onclick="openDeleteModal('${p.id}')" class="text-gray-400 hover:text-red-500 p-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }
+
+    function render() {
+      const filtered = getFiltered();
+      const gridEl = document.getElementById('gridView');
+      const tableEl = document.getElementById('tableView');
+      const tableBody = document.getElementById('tableBody');
+      const emptyEl = document.getElementById('emptyState');
+      const countEl = document.getElementById('projectCount');
+
+      countEl.textContent = `${filtered.length} of ${projects.length} projects`;
+
+      if (filtered.length === 0) {
+        gridEl.classList.add('hidden');
+        tableEl.classList.add('hidden');
+        emptyEl.classList.remove('hidden');
+        return;
+      }
+
+      emptyEl.classList.add('hidden');
+
+      if (currentView === 'grid') {
+        gridEl.classList.remove('hidden');
+        tableEl.classList.add('hidden');
+        gridEl.innerHTML = filtered.map(renderCard).join('');
+      } else {
+        gridEl.classList.add('hidden');
+        tableEl.classList.remove('hidden');
+        tableBody.innerHTML = filtered.map(renderRow).join('');
+      }
+    }
+
+    // ─── Modal ───
+    function openModal() {
+      document.getElementById('editId').value = '';
+      document.getElementById('modalTitle').textContent = 'Add Project';
+      document.getElementById('projectForm').reset();
+      document.getElementById('modalOverlay').classList.add('active');
+    }
+
+    function openEditModal(id) {
+      const p = projects.find(x => x.id === id);
+      if (!p) return;
+      document.getElementById('editId').value = p.id;
+      document.getElementById('modalTitle').textContent = 'Edit Project';
+      document.getElementById('formName').value = p.name || '';
+      document.getElementById('formDesc').value = p.description || '';
+      document.getElementById('formStatus').value = p.status || 'in_progress';
+      document.getElementById('formType').value = p.type || 'others';
+      document.getElementById('formUrl').value = p.live_url || '';
+      document.getElementById('formThumb').value = p.thumbnail_url || '';
+      document.getElementById('formCreatedBy').value = p.created_by || '';
+      document.getElementById('modalOverlay').classList.add('active');
+    }
+
+    function closeModal() {
+      document.getElementById('modalOverlay').classList.remove('active');
+    }
+
+    function openDeleteModal(id) {
+      deleteTargetId = id;
+      document.getElementById('deleteOverlay').classList.add('active');
+    }
+
+    function closeDeleteModal() {
+      deleteTargetId = null;
+      document.getElementById('deleteOverlay').classList.remove('active');
+    }
+
+    async function confirmDelete() {
+      if (!deleteTargetId) return;
+      try {
+        await deleteProject(deleteTargetId);
+      } catch (e) {
+        alert('Error deleting project: ' + e.message);
+      }
+      closeDeleteModal();
+    }
+
+    async function handleSubmit(e) {
+      e.preventDefault();
+      const project = {
+        id: document.getElementById('editId').value || undefined,
+        name: document.getElementById('formName').value.trim(),
+        description: document.getElementById('formDesc').value.trim() || null,
+        status: document.getElementById('formStatus').value,
+        type: document.getElementById('formType').value,
+        live_url: document.getElementById('formUrl').value.trim() || null,
+        thumbnail_url: document.getElementById('formThumb').value.trim() || null,
+        created_by: document.getElementById('formCreatedBy').value.trim() || null,
+      };
+      try {
+        await saveProject(project);
+        closeModal();
+      } catch (e) {
+        alert('Error saving project: ' + e.message);
+      }
+    }
+
+    // ─── Event Listeners ───
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentStatusFilter = btn.dataset.filter;
+        render();
+      });
+    });
+
+    document.getElementById('typeFilter').addEventListener('change', (e) => {
+      currentTypeFilter = e.target.value;
+      render();
+    });
+
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+      searchQuery = e.target.value;
+      render();
+    });
+
+    document.querySelectorAll('.view-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentView = btn.dataset.view;
+        render();
+      });
+    });
+
+    // Keyboard: Escape to close modals
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeModal();
+        closeDeleteModal();
+      }
+    });
+
+    // ─── Init ───
+    loadProjects();
+  </script>
+</body>
+</html>
