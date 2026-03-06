@@ -169,22 +169,22 @@
           <span class="text-white font-bold text-lg">U</span>
         </div>
         <div>
-          <h1 class="text-xl font-bold text-gray-900 leading-tight">Utopia Dashboard</h1>
-          <p class="text-xs text-gray-500">Project Tracker</p>
+          <h1 class="text-base sm:text-xl font-bold text-gray-900 leading-tight">Utopia Dashboard</h1>
+          <p class="text-xs text-gray-500 hidden sm:block">Project Tracker</p>
         </div>
       </div>
-      <div class="flex items-center gap-3">
-        <div class="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-1.5">
-          <div class="w-6 h-6 bg-brand/10 rounded-full flex items-center justify-center">
+      <div class="flex items-center gap-2 sm:gap-3">
+        <div class="flex items-center gap-2 border border-gray-200 rounded-lg px-2.5 py-1.5 cursor-pointer hover:bg-gray-50 transition-colors" onclick="editDisplayName()" title="Click to edit name">
+          <div class="w-6 h-6 bg-brand/10 rounded-full flex items-center justify-center shrink-0">
             <span id="userInitial" class="text-xs font-bold text-brand"></span>
           </div>
-          <span id="userName" class="text-xs font-semibold text-gray-700 hidden sm:block cursor-pointer hover:text-brand transition-colors" title="Click to edit name" onclick="editDisplayName()"></span>
-          <button onclick="logout()" class="text-gray-400 hover:text-red-500 ml-1" title="Sign out">
+          <span id="userName" class="text-xs font-semibold text-gray-700 hidden sm:block max-w-[100px] truncate"></span>
+          <button onclick="event.stopPropagation();logout()" class="text-gray-400 hover:text-red-500" title="Sign out">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
           </button>
         </div>
-        <button onclick="openModal()" class="bg-cta hover:bg-fuchsia-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors">
-          + Add Project
+        <button onclick="openModal()" class="bg-cta hover:bg-fuchsia-600 text-white px-3 sm:px-4 py-2 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap">
+          + <span class="hidden sm:inline">Add Project</span><span class="sm:hidden">Add</span>
         </button>
       </div>
     </div>
@@ -220,7 +220,7 @@
         <button class="filter-btn px-3 py-1.5 rounded-full text-xs font-semibold border border-gray-200 transition-colors" data-filter="live">Live</button>
         <button class="filter-btn px-3 py-1.5 rounded-full text-xs font-semibold border border-gray-200 transition-colors" data-filter="in_progress">In Progress</button>
         <button class="filter-btn px-3 py-1.5 rounded-full text-xs font-semibold border border-gray-200 transition-colors" data-filter="almost_done">Almost Done</button>
-        <button class="filter-btn px-3 py-1.5 rounded-full text-xs font-semibold border border-gray-200 transition-colors" data-filter="abandoned">Abandoned</button>
+        <button id="abandonedViewBtn" onclick="toggleAbandonedView()" class="px-3 py-1.5 rounded-full text-xs font-semibold border border-gray-200 text-gray-400 transition-colors hover:border-red-300 hover:text-red-500">Abandoned</button>
         <button id="starFilterBtn" onclick="toggleStarFilter()" class="px-3 py-1.5 rounded-full text-xs font-semibold border border-gray-200 transition-colors flex items-center gap-1">
           <svg id="starFilterIcon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
           Starred
@@ -256,13 +256,13 @@
           <tr>
             <th class="w-10 px-3 py-3 text-center text-gray-400 text-xs" title="Star to bookmark">★</th>
             <th class="w-10 px-3 py-3" title="Type"></th>
-            <th class="text-left text-xs font-semibold text-gray-500 px-3 py-3 w-[200px]">Project</th>
-            <th class="text-left text-xs font-semibold text-gray-500 px-3 py-3 w-[100px]">Status</th>
-            <th class="text-left text-xs font-semibold text-gray-500 px-3 py-3 w-[180px]">URL</th>
-            <th class="text-left text-xs font-semibold text-gray-500 px-3 py-3">Remarks</th>
-            <th class="text-left text-xs font-semibold text-gray-500 px-3 py-3 w-[60px]">By</th>
-            <th class="text-left text-xs font-semibold text-gray-500 px-3 py-3 w-[70px]">Updated</th>
-            <th class="w-[60px] px-3 py-3"></th>
+            <th class="text-left text-xs font-semibold text-gray-500 px-3 py-3">Project</th>
+            <th class="text-left text-xs font-semibold text-gray-500 px-3 py-3 w-[90px]">Status</th>
+            <th class="text-left text-xs font-semibold text-gray-500 px-3 py-3 w-[150px] hidden sm:table-cell">URL</th>
+            <th class="text-left text-xs font-semibold text-gray-500 px-3 py-3 hidden md:table-cell">Remarks</th>
+            <th class="text-left text-xs font-semibold text-gray-500 px-3 py-3 w-[60px] hidden lg:table-cell">By</th>
+            <th class="text-left text-xs font-semibold text-gray-500 px-3 py-3 w-[70px] hidden lg:table-cell">Updated</th>
+            <th class="w-[50px] px-2 py-3"></th>
           </tr>
         </thead>
         <tbody id="tableBody"></tbody>
@@ -360,6 +360,7 @@
     let currentUser = null;
     let sortByStar = false;
     let starFilter = false;
+    let showAbandoned = false;
 
     // ─── Supabase Auth (client) ───
     const _supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -497,9 +498,15 @@
     // ─── Helpers ───
     function getFiltered() {
       let list = projects.filter(p => {
-        if (starFilter && !p.starred) return false;
-        if (currentStatusFilter !== 'all' && p.status !== currentStatusFilter) return false;
-        if (currentTypeFilter !== 'all' && p.type !== currentTypeFilter) return false;
+        // Abandoned is a separate view — never mix with main list
+        if (showAbandoned) {
+          if (p.status !== 'abandoned') return false;
+        } else {
+          if (p.status === 'abandoned') return false;
+          if (starFilter && !p.starred) return false;
+          if (currentStatusFilter !== 'all' && p.status !== currentStatusFilter) return false;
+          if (currentTypeFilter !== 'all' && p.type !== currentTypeFilter) return false;
+        }
         if (searchQuery) {
           const q = searchQuery.toLowerCase();
           return (p.name || '').toLowerCase().includes(q) ||
@@ -509,9 +516,8 @@
         }
         return true;
       });
-      if (sortByStar) {
-        list = [...list].sort((a, b) => (b.starred ? 1 : 0) - (a.starred ? 1 : 0));
-      }
+      // Always pin starred items to the top
+      list = [...list].sort((a, b) => (b.starred ? 1 : 0) - (a.starred ? 1 : 0));
       return list;
     }
 
@@ -689,7 +695,6 @@
 
     function toggleStarFilter() {
       starFilter = !starFilter;
-      sortByStar = starFilter; // sort starred first when filter is on
       const btn = document.getElementById('starFilterBtn');
       const icon = document.getElementById('starFilterIcon');
       if (starFilter) {
@@ -700,6 +705,30 @@
         btn.classList.remove('active');
         icon.setAttribute('fill', 'none');
         icon.setAttribute('stroke', '#9ca3af');
+      }
+      render();
+    }
+
+    function toggleAbandonedView() {
+      showAbandoned = !showAbandoned;
+      const btn = document.getElementById('abandonedViewBtn');
+      if (showAbandoned) {
+        btn.style.background = '#fee2e2';
+        btn.style.color = '#991b1b';
+        btn.style.borderColor = '#fca5a5';
+        // Reset main filters when entering abandoned view
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector('.filter-btn[data-filter="all"]').classList.add('active');
+        currentStatusFilter = 'all';
+        starFilter = false;
+        const icon = document.getElementById('starFilterIcon');
+        document.getElementById('starFilterBtn').classList.remove('active');
+        icon.setAttribute('fill', 'none');
+        icon.setAttribute('stroke', '#9ca3af');
+      } else {
+        btn.style.background = '';
+        btn.style.color = '';
+        btn.style.borderColor = '';
       }
       render();
     }
@@ -921,18 +950,18 @@
         : `<span class="editable-text text-xs text-gray-300 px-1" title="Click to add URL">+ add url</span>`;
       return `
         <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-          <td class="px-3 py-3 text-center">${starIconHtml(p, 18)}</td>
-          <td class="px-3 py-3">${typeIconHtml(p.type, p.id, 26)}</td>
-          <td class="px-3 py-3">
+          <td class="px-2 sm:px-3 py-3 text-center">${starIconHtml(p, 18)}</td>
+          <td class="px-2 sm:px-3 py-3">${typeIconHtml(p.type, p.id, 24)}</td>
+          <td class="px-2 sm:px-3 py-3 min-w-0">
             <div class="editable-text font-semibold text-sm text-gray-900 truncate px-1" onclick="startEdit(this,'${p.id}','name')" title="Click to edit name">${escapeHtml(p.name)}</div>
-            <div class="editable-text text-xs text-gray-500 truncate px-1 mt-0.5" onclick="startEdit(this,'${p.id}','description')" title="Click to edit description">${escapeHtml(p.description || '')}</div>
+            <div class="editable-text text-xs text-gray-500 truncate px-1 mt-0.5 hidden sm:block" onclick="startEdit(this,'${p.id}','description')" title="Click to edit description">${escapeHtml(p.description || '')}</div>
           </td>
-          <td class="px-3 py-3">${statusIconHtml(p.status, p.id, 22)}</td>
-          <td class="px-3 py-3 cursor-pointer" onclick="editUrlCell(this,'${p.id}',${JSON.stringify(p.live_url||'')})">${urlDisplay}</td>
-          <td class="px-3 py-3">
+          <td class="px-2 sm:px-3 py-3">${statusIconHtml(p.status, p.id, 22)}</td>
+          <td class="px-2 sm:px-3 py-3 cursor-pointer hidden sm:table-cell" onclick="editUrlCell(this,'${p.id}',${JSON.stringify(p.live_url||'')})">${urlDisplay}</td>
+          <td class="px-2 sm:px-3 py-3 hidden md:table-cell">
             <div class="flex items-center gap-1.5">
               <input type="text" value="${escapeHtml(p.remarks || '')}" placeholder="Add remark…"
-                class="remarks-input text-xs text-gray-500 italic border border-transparent rounded px-1.5 py-1 w-full min-w-[120px] focus:border-brand focus:outline-none focus:bg-white bg-transparent"
+                class="remarks-input text-xs text-gray-500 italic border border-transparent rounded px-1.5 py-1 w-full min-w-[100px] focus:border-brand focus:outline-none focus:bg-white bg-transparent"
                 data-id="${p.id}" data-original="${escapeHtml(p.remarks || '')}"
                 oninput="markRemarksDirty(this)"
                 onkeydown="if(event.key==='Enter')saveRemarks(this)">
@@ -940,9 +969,9 @@
                 class="remarks-save hidden shrink-0 text-[10px] font-semibold text-white bg-brand hover:bg-blue-700 px-2 py-0.5 rounded transition-colors">Save</button>
             </div>
           </td>
-          <td class="px-3 py-3 text-xs text-gray-500">${escapeHtml(p.created_by || '—')}</td>
-          <td class="px-3 py-3 text-xs text-gray-400">${timeAgo(p.updated_at)}</td>
-          <td class="px-3 py-3">
+          <td class="px-2 sm:px-3 py-3 text-xs text-gray-500 hidden lg:table-cell">${escapeHtml(p.created_by || '—')}</td>
+          <td class="px-2 sm:px-3 py-3 text-xs text-gray-400 hidden lg:table-cell">${timeAgo(p.updated_at)}</td>
+          <td class="px-2 sm:px-3 py-3">
             ${canDelete ? `<button onclick="openDeleteModal('${p.id}')" class="text-gray-400 hover:text-red-500 p-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>` : ''}
           </td>
         </tr>
@@ -1063,6 +1092,14 @@
         document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         currentStatusFilter = btn.dataset.filter;
+        // Exit abandoned view if a main filter is clicked
+        if (showAbandoned) {
+          showAbandoned = false;
+          const ab = document.getElementById('abandonedViewBtn');
+          ab.style.background = '';
+          ab.style.color = '';
+          ab.style.borderColor = '';
+        }
         render();
       });
     });
