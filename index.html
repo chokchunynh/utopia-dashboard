@@ -227,11 +227,7 @@
         </button>
       </div>
       <div class="flex items-center gap-2">
-        <button id="sortStarBtn" onclick="toggleSortByStar()" class="flex items-center gap-1.5 text-xs border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-500 font-medium hover:bg-gray-50 transition-colors" title="Sort by starred">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-          Sort ★
-        </button>
-        <select id="typeFilter" class="text-xs border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-600 font-medium">
+<select id="typeFilter" class="text-xs border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-600 font-medium">
           <option value="all">All Types</option>
           <option value="internal_software">Internal Software</option>
           <option value="saas_software">SaaS Software</option>
@@ -693,6 +689,7 @@
 
     function toggleStarFilter() {
       starFilter = !starFilter;
+      sortByStar = starFilter; // sort starred first when filter is on
       const btn = document.getElementById('starFilterBtn');
       const icon = document.getElementById('starFilterIcon');
       if (starFilter) {
@@ -704,15 +701,6 @@
         icon.setAttribute('fill', 'none');
         icon.setAttribute('stroke', '#9ca3af');
       }
-      render();
-    }
-
-    function toggleSortByStar() {
-      sortByStar = !sortByStar;
-      const btn = document.getElementById('sortStarBtn');
-      btn.classList.toggle('bg-amber-50', sortByStar);
-      btn.classList.toggle('border-amber-300', sortByStar);
-      btn.classList.toggle('text-amber-600', sortByStar);
       render();
     }
 
