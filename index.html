@@ -897,7 +897,7 @@
               </div>
               <div class="flex items-center gap-1 shrink-0">
                 ${starIconHtml(p, 16)}
-                ${(!p.user_id || p.user_id === currentUser?.id) ? `<button onclick="openDeleteModal('${p.id}')" class="text-gray-400 hover:text-red-500 p-1" title="Delete"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>` : ''}
+                ${(p.user_id === currentUser?.id) ? `<button onclick="openDeleteModal('${p.id}')" class="text-gray-400 hover:text-red-500 p-1" title="Delete"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>` : ''}
               </div>
             </div>
             <p class="text-xs text-gray-500 mb-3 line-clamp-2">${escapeHtml(p.description || 'No description')}</p>
@@ -927,7 +927,7 @@
     }
 
     function renderRow(p) {
-      const canDelete = !p.user_id || p.user_id === currentUser?.id;
+      const canDelete = p.user_id === currentUser?.id;
       const urlDisplay = p.live_url
         ? `<a href="${escapeHtml(p.live_url)}" target="_blank" rel="noopener" class="editable-text text-xs text-brand hover:underline truncate block px-1" title="Click to edit">${escapeHtml(p.live_url.replace('https://',''))}</a>`
         : `<span class="editable-text text-xs text-gray-300 px-1" title="Click to add URL">+ add url</span>`;
