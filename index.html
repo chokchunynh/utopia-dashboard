@@ -55,18 +55,53 @@
       background: linear-gradient(135deg, #e0e7ff 0%, #f0e6ff 100%);
       display: flex; align-items: center; justify-content: center;
     }
-    /* Bulk action bar */
-    .bulk-bar { transform: translateY(100%); opacity: 0; transition: transform 0.2s ease, opacity 0.2s ease; }
-    .bulk-bar.active { transform: translateY(0); opacity: 1; }
+    /* ── Auth screen particle background ── */
+    @keyframes aurora1 {
+      0%,100% { transform: translate(0,0) scale(1); }
+      33%      { transform: translate(50px,-40px) scale(1.12); }
+      66%      { transform: translate(-30px,50px) scale(0.93); }
+    }
+    @keyframes aurora2 {
+      0%,100% { transform: translate(0,0) scale(1); }
+      33%      { transform: translate(-60px,35px) scale(0.9); }
+      66%      { transform: translate(40px,-50px) scale(1.08); }
+    }
+    @keyframes aurora3 {
+      0%,100% { transform: translate(0,0) scale(1); }
+      50%      { transform: translate(-40px,-40px) scale(1.18); }
+    }
+    .aurora { position:absolute; border-radius:50%; filter:blur(72px); pointer-events:none; }
+    .aurora-1 { animation: aurora1 14s ease-in-out infinite; }
+    .aurora-2 { animation: aurora2 18s ease-in-out infinite; }
+    .aurora-3 { animation: aurora3 11s ease-in-out infinite; }
+    /* Card float-in */
+    @keyframes card-in {
+      from { opacity:0; transform: translateY(24px) scale(0.97); }
+      to   { opacity:1; transform: translateY(0)    scale(1); }
+    }
+    .auth-card-anim { animation: card-in 0.6s cubic-bezier(0.22,1,0.36,1) both; }
   </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
 
   <!-- Auth Screen -->
-  <div id="authScreen" class="hidden min-h-screen flex items-center justify-center p-4 bg-gray-50">
-    <div class="bg-white rounded-2xl w-full max-w-sm p-8 border border-gray-200 shadow-sm">
+  <div id="authScreen" class="hidden min-h-screen flex items-center justify-center p-4 relative overflow-hidden" style="background:#06060f">
+
+    <!-- Aurora blobs -->
+    <div class="aurora aurora-1" style="width:700px;height:700px;top:-220px;left:-180px;background:radial-gradient(circle,rgba(17,109,255,0.28) 0%,transparent 70%)"></div>
+    <div class="aurora aurora-2" style="width:550px;height:550px;bottom:-160px;right:-120px;background:radial-gradient(circle,rgba(124,58,237,0.22) 0%,transparent 70%)"></div>
+    <div class="aurora aurora-3" style="width:420px;height:420px;bottom:80px;left:38%;background:radial-gradient(circle,rgba(6,182,212,0.16) 0%,transparent 70%)"></div>
+
+    <!-- Particle canvas -->
+    <canvas id="authCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1"></canvas>
+
+    <!-- Cursor glow -->
+    <div id="cursorGlow" style="position:fixed;width:480px;height:480px;border-radius:50%;pointer-events:none;opacity:0;z-index:2;background:radial-gradient(circle,rgba(17,109,255,0.14) 0%,rgba(17,109,255,0.05) 45%,transparent 70%);transition:opacity 0.6s ease;transform:translate(-50%,-50%);will-change:left,top"></div>
+
+    <!-- Card -->
+    <div class="auth-card-anim bg-white rounded-2xl w-full max-w-sm p-8 shadow-2xl relative z-10" style="border:1px solid rgba(255,255,255,0.12)">
       <div class="flex items-center gap-3 mb-6">
-        <div class="w-10 h-10 bg-brand rounded-lg flex items-center justify-center">
+        <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:linear-gradient(135deg,#116dff,#7c3aed)">
           <span class="text-white font-bold text-xl">U</span>
         </div>
         <div>
@@ -87,12 +122,12 @@
         <div class="flex-1 h-px bg-gray-200"></div>
       </div>
 
-      <!-- Magic Link / Email form -->
+      <!-- Magic Link form -->
       <div id="magicLinkForm">
         <form onsubmit="sendMagicLink(event)" class="space-y-3">
           <div>
             <label class="block text-xs font-semibold text-gray-600 mb-1">Email</label>
-            <input id="authEmailInput" type="email" required class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand" placeholder="you@utopiaventures.com" autocomplete="email">
+            <input id="authEmailInput" type="email" required class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand" placeholder="you@company.com" autocomplete="email">
           </div>
           <p id="authError" class="text-xs text-red-500 hidden"></p>
           <button type="submit" class="w-full bg-brand hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors">Send Magic Link</button>
@@ -368,6 +403,8 @@
       document.getElementById('authScreen').classList.remove('hidden');
       document.getElementById('magicLinkForm').classList.remove('hidden');
       document.getElementById('magicLinkSent').classList.add('hidden');
+      // Small delay so canvas has dimensions after unhide
+      setTimeout(initAuthParticles, 50);
     }
 
     async function logout() {
@@ -1037,10 +1074,7 @@
         document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         currentView = btn.dataset.view;
-        if (currentView === 'grid') {
-          selectedIds.clear();
-          updateBulkBar();
-        }
+        if (currentView === 'grid') { /* grid selected */ }
         render();
       });
     });
@@ -1048,6 +1082,123 @@
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') { closeModal(); closeDeleteModal(); }
     });
+
+    // ─── Auth particle field ───
+    let _authAnimId = null;
+    let _authInited = false;
+
+    function initAuthParticles() {
+      if (_authInited) return;
+      _authInited = true;
+      const canvas = document.getElementById('authCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      let W, H, pts = [];
+      let mx = -9999, my = -9999;
+
+      function resize() {
+        W = canvas.width  = canvas.offsetWidth  || window.innerWidth;
+        H = canvas.height = canvas.offsetHeight || window.innerHeight;
+      }
+
+      function makePoint() {
+        const hue = [210, 220, 200, 270][Math.floor(Math.random() * 4)];
+        return {
+          x: Math.random() * W, y: Math.random() * H,
+          vx: (Math.random() - 0.5) * 0.35,
+          vy: (Math.random() - 0.5) * 0.35,
+          r: Math.random() * 1.4 + 0.4,
+          a: Math.random() * 0.45 + 0.12,
+          hue,
+        };
+      }
+
+      function init() {
+        resize();
+        pts = [];
+        const n = Math.min(Math.round(W * H / 11000), 75);
+        for (let i = 0; i < n; i++) pts.push(makePoint());
+      }
+
+      function frame() {
+        ctx.clearRect(0, 0, W, H);
+
+        // Connection lines
+        for (let i = 0; i < pts.length; i++) {
+          for (let j = i + 1; j < pts.length; j++) {
+            const dx = pts[i].x - pts[j].x, dy = pts[i].y - pts[j].y;
+            const d = Math.sqrt(dx*dx + dy*dy);
+            if (d < 115) {
+              ctx.beginPath();
+              ctx.strokeStyle = `rgba(120,170,255,${(1 - d/115) * 0.11})`;
+              ctx.lineWidth = 0.5;
+              ctx.moveTo(pts[i].x, pts[i].y);
+              ctx.lineTo(pts[j].x, pts[j].y);
+              ctx.stroke();
+            }
+          }
+        }
+
+        // Particles
+        for (const p of pts) {
+          // Cursor repulsion
+          const dx = p.x - mx, dy = p.y - my;
+          const d2 = dx*dx + dy*dy;
+          const R = 170;
+          if (d2 < R*R && d2 > 1) {
+            const d = Math.sqrt(d2);
+            const f = (1 - d/R) * 1.6;
+            p.vx += (dx/d) * f;
+            p.vy += (dy/d) * f;
+          }
+
+          // Speed cap + damping
+          const spd = Math.sqrt(p.vx*p.vx + p.vy*p.vy);
+          if (spd > 4.5) { p.vx = p.vx/spd*4.5; p.vy = p.vy/spd*4.5; }
+          p.vx *= 0.974; p.vy *= 0.974;
+
+          p.x += p.vx; p.y += p.vy;
+
+          // Wrap seamlessly
+          if (p.x < 0) p.x += W; if (p.x > W) p.x -= W;
+          if (p.y < 0) p.y += H; if (p.y > H) p.y -= H;
+
+          // Glow halo
+          const gr = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 7);
+          gr.addColorStop(0, `hsla(${p.hue},100%,72%,${p.a * 0.7})`);
+          gr.addColorStop(1, `hsla(${p.hue},100%,72%,0)`);
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r * 7, 0, Math.PI * 2);
+          ctx.fillStyle = gr;
+          ctx.fill();
+
+          // Core dot
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fillStyle = `hsla(${p.hue},80%,88%,${p.a + 0.35})`;
+          ctx.fill();
+        }
+
+        _authAnimId = requestAnimationFrame(frame);
+      }
+
+      const screen = document.getElementById('authScreen');
+      screen.addEventListener('mousemove', e => {
+        mx = e.clientX; my = e.clientY;
+        const g = document.getElementById('cursorGlow');
+        g.style.left = e.clientX + 'px';
+        g.style.top  = e.clientY + 'px';
+        g.style.opacity = '1';
+      });
+      screen.addEventListener('mouseleave', () => {
+        mx = -9999; my = -9999;
+        document.getElementById('cursorGlow').style.opacity = '0';
+      });
+
+      window.addEventListener('resize', init);
+      init();
+      frame();
+    }
 
     checkSession();
   </script>
