@@ -148,6 +148,16 @@
     </div>
   </div>
 
+  <!-- Loading screen (shown until auth state resolves) -->
+  <div id="loadingScreen" class="min-h-screen flex items-center justify-center bg-gray-50">
+    <div class="flex flex-col items-center gap-3">
+      <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background:linear-gradient(135deg,#116dff,#7c3aed)">
+        <span class="text-white font-bold text-lg">U</span>
+      </div>
+      <div class="w-5 h-5 border-2 border-brand border-t-transparent rounded-full animate-spin"></div>
+    </div>
+  </div>
+
   <!-- Dashboard (hidden until logged in) -->
   <div id="dashboardApp" class="hidden">
 
@@ -411,19 +421,29 @@
       await _supa.auth.signOut();
     }
 
-    // Listen for auth state changes — single source of truth
-    _supa.auth.onAuthStateChange(async (event, session) => {
+    // Listen for auth state changes — MUST be synchronous (no await inside)
+    // Supabase holds an internal lock during this callback — any awaited
+    // Supabase call inside it will deadlock. Defer async work with setTimeout.
+    _supa.auth.onAuthStateChange((event, session) => {
+      document.getElementById('loadingScreen').classList.add('hidden');
       if (session && session.user) {
         const u = session.user;
         const fallback = u.user_metadata?.full_name || u.user_metadata?.name || u.email.split('@')[0];
-        // Load saved display name from user_profiles
-        let displayName = fallback;
-        try {
-          const { data } = await _supa.from('user_profiles').select('display_name').eq('id', u.id).single();
-          if (data?.display_name) displayName = data.display_name;
-        } catch (_) {}
-        currentUser = { id: u.id, email: u.email, displayName };
+        currentUser = { id: u.id, email: u.email, displayName: fallback };
         showDashboard();
+        // Fetch saved display name AFTER callback exits (avoids auth lock deadlock)
+        setTimeout(async () => {
+          try {
+            const { data } = await _supa.from('user_profiles').select('display_name').eq('id', u.id).single();
+            if (data?.display_name && currentUser) {
+              currentUser.displayName = data.display_name;
+              const el = document.getElementById('userName');
+              if (el) el.textContent = data.display_name;
+              const ini = document.getElementById('userInitial');
+              if (ini) ini.textContent = data.display_name[0].toUpperCase();
+            }
+          } catch (_) {}
+        }, 0);
       } else {
         currentUser = null;
         showAuthScreen();
