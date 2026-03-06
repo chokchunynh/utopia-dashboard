@@ -11,6 +11,7 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>U</text></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -35,7 +36,13 @@
     .card:hover { transform: translateY(-2px); }
     .status-live { background: #dcfce7; color: #166534; }
     .status-in_progress { background: #fef3c7; color: #92400e; }
+    .status-almost_done { background: #e0e7ff; color: #3730a3; }
     .status-abandoned { background: #fee2e2; color: #991b1b; }
+    .inline-select { border: none; outline: none; cursor: pointer; background: transparent; appearance: none; -webkit-appearance: none; font-weight: 600; font-family: inherit; padding: 0; margin: 0; }
+    .editable-text { cursor: pointer; border-radius: 4px; }
+    .editable-text:hover { background: rgba(17,109,255,0.06); }
+    .col-resize { position:absolute; right:0; top:0; bottom:0; width:5px; cursor:col-resize; user-select:none; z-index:5; }
+    .col-resize:hover, .col-resize.dragging { background: #116dff44; }
     .type-internal_software { background: #dbeafe; color: #1e40af; }
     .type-saas_software { background: #f3e8ff; color: #7c3aed; }
     .type-landing_page { background: #fce7f3; color: #be185d; }
@@ -56,7 +63,7 @@
 <body class="bg-gray-50 min-h-screen">
 
   <!-- Auth Screen -->
-  <div id="authScreen" class="min-h-screen flex items-center justify-center p-4">
+  <div id="authScreen" class="hidden min-h-screen flex items-center justify-center p-4 bg-gray-50">
     <div class="bg-white rounded-2xl w-full max-w-sm p-8 border border-gray-200 shadow-sm">
       <div class="flex items-center gap-3 mb-6">
         <div class="w-10 h-10 bg-brand rounded-lg flex items-center justify-center">
@@ -64,22 +71,45 @@
         </div>
         <div>
           <h1 class="text-lg font-bold text-gray-900">Utopia Dashboard</h1>
-          <p class="text-xs text-gray-500">Sign in or register to continue</p>
+          <p class="text-xs text-gray-500">Sign in to continue</p>
         </div>
       </div>
-      <form id="authForm" class="space-y-3" onsubmit="handleAuth(event)">
-        <div>
-          <label class="block text-xs font-semibold text-gray-600 mb-1">Username</label>
-          <input id="authUsername" type="text" required class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand" placeholder="Your name" autocomplete="username">
+
+      <!-- Google OAuth -->
+      <button onclick="signInWithGoogle()" class="w-full flex items-center justify-center gap-3 border border-gray-200 rounded-lg px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors mb-4">
+        <svg width="18" height="18" viewBox="0 0 18 18"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z" fill="#34A853"/><path d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.961H.957C.347 6.175 0 7.55 0 9s.348 2.825.957 4.039l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
+        Continue with Google
+      </button>
+
+      <div class="flex items-center gap-3 mb-4">
+        <div class="flex-1 h-px bg-gray-200"></div>
+        <span class="text-xs text-gray-400">or</span>
+        <div class="flex-1 h-px bg-gray-200"></div>
+      </div>
+
+      <!-- Magic Link / Email form -->
+      <div id="magicLinkForm">
+        <form onsubmit="sendMagicLink(event)" class="space-y-3">
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Email</label>
+            <input id="authEmailInput" type="email" required class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand" placeholder="you@utopiaventures.com" autocomplete="email">
+          </div>
+          <p id="authError" class="text-xs text-red-500 hidden"></p>
+          <button type="submit" class="w-full bg-brand hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors">Send Magic Link</button>
+        </form>
+      </div>
+
+      <!-- Sent confirmation -->
+      <div id="magicLinkSent" class="hidden text-center py-2">
+        <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+          <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
         </div>
-        <div>
-          <label class="block text-xs font-semibold text-gray-600 mb-1">Password</label>
-          <input id="authPassword" type="password" required minlength="4" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand" placeholder="Min 4 characters" autocomplete="current-password">
-        </div>
-        <p id="authError" class="text-xs text-red-500 hidden"></p>
-        <button type="submit" class="w-full bg-brand hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors">Sign In / Register</button>
-        <p class="text-[10px] text-gray-400 text-center">New username? We'll create your account automatically.</p>
-      </form>
+        <p class="text-sm font-semibold text-gray-900 mb-1">Check your email</p>
+        <p class="text-xs text-gray-500">We sent a sign-in link to <span id="sentEmail" class="font-semibold text-gray-700"></span></p>
+        <button onclick="document.getElementById('magicLinkSent').classList.add('hidden');document.getElementById('magicLinkForm').classList.remove('hidden')" class="mt-3 text-xs text-brand font-semibold hover:underline">Use a different email</button>
+      </div>
+
+      <p class="text-[10px] text-gray-400 text-center mt-4">Utopia Ventures internal tool</p>
     </div>
   </div>
 
@@ -123,6 +153,7 @@
         <button class="filter-btn active px-3 py-1.5 rounded-full text-xs font-semibold border border-gray-200 transition-colors" data-filter="all">All</button>
         <button class="filter-btn px-3 py-1.5 rounded-full text-xs font-semibold border border-gray-200 transition-colors" data-filter="live">Live</button>
         <button class="filter-btn px-3 py-1.5 rounded-full text-xs font-semibold border border-gray-200 transition-colors" data-filter="in_progress">In Progress</button>
+        <button class="filter-btn px-3 py-1.5 rounded-full text-xs font-semibold border border-gray-200 transition-colors" data-filter="almost_done">Almost Done</button>
         <button class="filter-btn px-3 py-1.5 rounded-full text-xs font-semibold border border-gray-200 transition-colors" data-filter="abandoned">Abandoned</button>
       </div>
       <div class="flex items-center gap-2">
@@ -135,10 +166,10 @@
         </select>
         <input id="searchInput" type="text" placeholder="Search..." class="text-xs border border-gray-200 rounded-lg px-3 py-1.5 w-32 sm:w-40">
         <div class="flex border border-gray-200 rounded-lg overflow-hidden">
-          <button class="view-btn active p-1.5" data-view="grid" title="Grid view">
+          <button class="view-btn p-1.5" data-view="grid" title="Grid view">
             <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
           </button>
-          <button class="view-btn p-1.5" data-view="table" title="Table view">
+          <button class="view-btn active p-1.5" data-view="table" title="Table view">
             <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
           </button>
         </div>
@@ -154,9 +185,9 @@
         <thead class="bg-gray-50 border-b border-gray-200">
           <tr>
             <th class="w-10 px-3 py-3"><input type="checkbox" id="selectAll" class="rounded" title="Select all"></th>
+            <th class="w-10 px-3 py-3" title="Type"></th>
             <th class="text-left text-xs font-semibold text-gray-500 px-3 py-3 w-[200px]">Project</th>
             <th class="text-left text-xs font-semibold text-gray-500 px-3 py-3 w-[100px]">Status</th>
-            <th class="text-left text-xs font-semibold text-gray-500 px-3 py-3 w-[100px]">Type</th>
             <th class="text-left text-xs font-semibold text-gray-500 px-3 py-3 w-[180px]">URL</th>
             <th class="text-left text-xs font-semibold text-gray-500 px-3 py-3">Remarks</th>
             <th class="text-left text-xs font-semibold text-gray-500 px-3 py-3 w-[60px]">By</th>
@@ -202,6 +233,7 @@
             <label class="block text-xs font-semibold text-gray-600 mb-1">Status *</label>
             <select id="formStatus" required class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand">
               <option value="in_progress">In Progress</option>
+              <option value="almost_done">Almost Done</option>
               <option value="live">Live</option>
               <option value="abandoned">Abandoned</option>
             </select>
@@ -260,7 +292,7 @@
     const TABLE = 'dashboard_projects';
 
     let projects = [];
-    let currentView = 'grid';
+    let currentView = 'list';
     let currentStatusFilter = 'all';
     let currentTypeFilter = 'all';
     let searchQuery = '';
@@ -268,85 +300,88 @@
     let selectedIds = new Set();
     let currentUser = null;
 
-    // ─── Auth ───
-    async function hashPassword(pw) {
-      const data = new TextEncoder().encode(pw);
-      const hash = await crypto.subtle.digest('SHA-256', data);
-      return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+    // ─── Supabase Auth (client) ───
+    const _supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        flowType: 'implicit',
+        detectSessionInUrl: true,
+        persistSession: true,
+      }
+    });
+
+    async function signInWithGoogle() {
+      const { error } = await _supa.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: 'https://utopia-dashboard-theta.vercel.app' }
+      });
+      if (error) { document.getElementById('authError').textContent = error.message; document.getElementById('authError').classList.remove('hidden'); }
     }
 
-    async function handleAuth(e) {
+    async function sendMagicLink(e) {
       e.preventDefault();
-      const username = document.getElementById('authUsername').value.trim();
-      const password = document.getElementById('authPassword').value;
-      const errorEl = document.getElementById('authError');
-      errorEl.classList.add('hidden');
-
-      if (!username || !password) return;
-      const pwHash = await hashPassword(password);
-
-      try {
-        // Check if user exists
-        const existing = await supaFetch(`dashboard_users?username=eq.${encodeURIComponent(username)}&select=id,username,password_hash`);
-        if (existing && existing.length > 0) {
-          // Login — verify password
-          if (existing[0].password_hash !== pwHash) {
-            errorEl.textContent = 'Wrong password.';
-            errorEl.classList.remove('hidden');
-            return;
-          }
-          currentUser = { id: existing[0].id, username: existing[0].username };
-        } else {
-          // Register — create new user
-          const created = await supaFetch('dashboard_users', {
-            method: 'POST',
-            body: JSON.stringify({ username, password_hash: pwHash }),
-          });
-          currentUser = { id: created[0].id, username: created[0].username };
-        }
-        localStorage.setItem('dashboard_user', JSON.stringify(currentUser));
-        showDashboard();
-      } catch (err) {
-        errorEl.textContent = 'Error: ' + err.message;
-        errorEl.classList.remove('hidden');
-      }
+      const email = document.getElementById('authEmailInput').value.trim();
+      const errEl = document.getElementById('authError');
+      errEl.classList.add('hidden');
+      const btn = e.target.querySelector('button[type=submit]');
+      btn.textContent = 'Sending…'; btn.disabled = true;
+      const { error } = await _supa.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: 'https://utopia-dashboard-theta.vercel.app' }
+      });
+      btn.textContent = 'Send Magic Link'; btn.disabled = false;
+      if (error) { errEl.textContent = error.message; errEl.classList.remove('hidden'); return; }
+      document.getElementById('sentEmail').textContent = email;
+      document.getElementById('magicLinkForm').classList.add('hidden');
+      document.getElementById('magicLinkSent').classList.remove('hidden');
     }
 
     function showDashboard() {
       document.getElementById('authScreen').classList.add('hidden');
       document.getElementById('dashboardApp').classList.remove('hidden');
-      document.getElementById('userInitial').textContent = currentUser.username[0].toUpperCase();
-      document.getElementById('userName').textContent = currentUser.username;
+      document.getElementById('userInitial').textContent = (currentUser.displayName || currentUser.email)[0].toUpperCase();
+      document.getElementById('userName').textContent = currentUser.displayName || currentUser.email;
       loadProjects();
     }
 
-    function logout() {
-      localStorage.removeItem('dashboard_user');
-      currentUser = null;
+    function showAuthScreen() {
       document.getElementById('dashboardApp').classList.add('hidden');
       document.getElementById('authScreen').classList.remove('hidden');
-      document.getElementById('authForm').reset();
+      document.getElementById('magicLinkForm').classList.remove('hidden');
+      document.getElementById('magicLinkSent').classList.add('hidden');
     }
 
-    // Check saved session on load
-    function checkSession() {
-      const saved = localStorage.getItem('dashboard_user');
-      if (saved) {
-        try {
-          currentUser = JSON.parse(saved);
-          showDashboard();
-          return;
-        } catch {}
+    async function logout() {
+      await _supa.auth.signOut();
+    }
+
+    // Listen for auth state changes — single source of truth
+    _supa.auth.onAuthStateChange((event, session) => {
+      if (session && session.user) {
+        const u = session.user;
+        currentUser = {
+          id: u.id,
+          email: u.email,
+          displayName: u.user_metadata?.full_name || u.user_metadata?.name || u.email.split('@')[0],
+        };
+        showDashboard();
+      } else {
+        currentUser = null;
+        showAuthScreen();
       }
-      document.getElementById('authScreen').classList.remove('hidden');
+    });
+
+    function checkSession() {
+      // onAuthStateChange fires automatically on load — nothing needed here
     }
 
     // ─── Supabase REST ───
     async function supaFetch(path, options = {}) {
+      const { data: { session } } = await _supa.auth.getSession();
+      const token = session?.access_token || SUPABASE_ANON_KEY;
       const url = `${SUPABASE_URL}/rest/v1/${path}`;
       const headers = {
         'apikey': SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
         'Prefer': options.prefer || 'return=representation',
       };
@@ -407,7 +442,7 @@
     }
 
     function statusLabel(s) {
-      return { live: 'Live', in_progress: 'In Progress', abandoned: 'Abandoned' }[s] || s;
+      return { live: 'Live', in_progress: 'In Progress', almost_done: 'Almost Done', abandoned: 'Abandoned' }[s] || s;
     }
 
     function typeLabel(t) {
@@ -431,6 +466,242 @@
       const div = document.createElement('div');
       div.textContent = str;
       return div.innerHTML;
+    }
+
+    // ─── Inline Field Editing ───
+    const TYPE_ICONS = {
+      internal_software: { color: '#1e40af', bg: '#dbeafe', svg: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>' },
+      saas_software:     { color: '#7c3aed', bg: '#f3e8ff', svg: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"/>' },
+      landing_page:      { color: '#be185d', bg: '#fce7f3', svg: '<rect x="2" y="3" width="20" height="14" rx="2" ry="2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="8" y1="21" x2="16" y2="21" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="17" x2="12" y2="21" stroke-width="2" stroke-linecap="round"/>' },
+      others:            { color: '#475569', bg: '#f1f5f9', svg: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>' },
+    };
+    const TYPE_ORDER = ['internal_software','saas_software','landing_page','others'];
+
+    // ─── Status Icons ───
+    const STATUS_ICONS = {
+      in_progress:  { label: 'In Progress',  color: '#92400e', bg: '#fef3c7', svg: '<circle cx="12" cy="12" r="9" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="12" x2="12" y2="6" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="12" x2="17" y2="12" stroke-width="2" stroke-linecap="round"/>' },
+      almost_done:  { label: 'Almost Done', color: '#3730a3', bg: '#e0e7ff', svg: '<circle cx="12" cy="12" r="9" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="12" x2="12" y2="6" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="12" x2="7" y2="12" stroke-width="2" stroke-linecap="round"/>' },
+      live:         { label: 'Live',         color: '#166534', bg: '#dcfce7', svg: '<circle cx="12" cy="12" r="9" fill="#22c55e" stroke="#22c55e" stroke-width="0"/><polyline points="7 12 10.5 15.5 17 9" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>' },
+      abandoned:    { label: 'Abandoned',    color: '#991b1b', bg: '#fee2e2', svg: '<circle cx="12" cy="12" r="9" fill="#ef4444" stroke="#ef4444" stroke-width="0"/><line x1="8" y1="8" x2="16" y2="16" stroke="white" stroke-width="2.5" stroke-linecap="round"/><line x1="16" y1="8" x2="8" y2="16" stroke="white" stroke-width="2.5" stroke-linecap="round"/>' },
+    };
+    const STATUS_ORDER = ['in_progress','almost_done','live','abandoned'];
+
+    function statusIconHtml(status, id, size = 22) {
+      const s = STATUS_ICONS[status] || STATUS_ICONS.in_progress;
+      return `<div onclick="event.stopPropagation();openStatusPopover('${id}','${status}',this)" title="${s.label}" style="width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+        <svg width="${size}" height="${size}" fill="none" stroke="${s.color}" viewBox="0 0 24 24">${s.svg}</svg>
+      </div>`;
+    }
+
+    let _statusPopoverCleanup = null;
+
+    function openStatusPopover(id, currentStatus, anchor) {
+      document.getElementById('statusPopover')?.remove();
+      if (_statusPopoverCleanup) { _statusPopoverCleanup(); _statusPopoverCleanup = null; }
+
+      const pop = document.createElement('div');
+      pop.id = 'statusPopover';
+      pop.style.cssText = 'position:fixed;z-index:1000;background:#fff;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.12);padding:6px;min-width:160px';
+
+      STATUS_ORDER.forEach(st => {
+        const info = STATUS_ICONS[st];
+        const item = document.createElement('div');
+        item.style.cssText = `display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:7px;cursor:pointer;font-size:13px;font-weight:${st===currentStatus?'700':'500'};color:#111;background:${st===currentStatus?info.bg:'transparent'}`;
+        item.innerHTML = `<svg width="18" height="18" fill="none" stroke="${info.color}" viewBox="0 0 24 24">${info.svg}</svg>${info.label}`;
+        item.onmouseenter = () => { if (st !== currentStatus) item.style.background = '#f8fafc'; };
+        item.onmouseleave = () => { if (st !== currentStatus) item.style.background = 'transparent'; };
+        item.onclick = (e) => { e.stopPropagation(); patchField(id, 'status', st); pop.remove(); if (_statusPopoverCleanup) { _statusPopoverCleanup(); _statusPopoverCleanup = null; } };
+        pop.appendChild(item);
+      });
+
+      document.body.appendChild(pop);
+      const rect = anchor.getBoundingClientRect();
+      let left = rect.left;
+      const pw = 160;
+      if (left + pw > window.innerWidth - 8) left = window.innerWidth - pw - 8;
+      pop.style.top = (rect.bottom + 6) + 'px';
+      pop.style.left = left + 'px';
+
+      const close = (e) => { if (!pop.contains(e.target) && e.target !== anchor) { pop.remove(); document.removeEventListener('click', close); _statusPopoverCleanup = null; } };
+      setTimeout(() => document.addEventListener('click', close), 0);
+      _statusPopoverCleanup = () => document.removeEventListener('click', close);
+    }
+
+    function typeIconHtml(type, id, size = 22) {
+      const t = TYPE_ICONS[type] || TYPE_ICONS.others;
+      const label = typeLabel(type);
+      return `<div onclick="event.stopPropagation();openTypePopover('${id}','${type}',this)" title="${label}" style="width:${size}px;height:${size}px;border-radius:6px;background:${t.bg};display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;position:relative">
+        <svg width="${size-6}" height="${size-6}" fill="none" stroke="${t.color}" viewBox="0 0 24 24">${t.svg}</svg>
+      </div>`;
+    }
+
+    let _typePopoverCleanup = null;
+
+    function openTypePopover(id, currentType, anchor) {
+      // Close any existing popover
+      document.getElementById('typePopover')?.remove();
+      if (_typePopoverCleanup) { _typePopoverCleanup(); _typePopoverCleanup = null; }
+
+      const pop = document.createElement('div');
+      pop.id = 'typePopover';
+      pop.style.cssText = 'position:fixed;z-index:1000;background:#fff;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.12);padding:6px;min-width:180px';
+
+      TYPE_ORDER.forEach(t => {
+        const info = TYPE_ICONS[t];
+        const item = document.createElement('div');
+        item.style.cssText = `display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:7px;cursor:pointer;font-size:13px;font-weight:${t===currentType?'700':'500'};color:#111;background:${t===currentType?info.bg:'transparent'}`;
+        item.innerHTML = `<div style="width:22px;height:22px;border-radius:5px;background:${info.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="13" height="13" fill="none" stroke="${info.color}" viewBox="0 0 24 24">${info.svg}</svg></div>${typeLabel(t)}`;
+        item.onmouseenter = () => { if (t !== currentType) item.style.background = '#f8fafc'; };
+        item.onmouseleave = () => { if (t !== currentType) item.style.background = 'transparent'; };
+        item.onclick = (e) => { e.stopPropagation(); patchField(id, 'type', t); pop.remove(); if (_typePopoverCleanup) { _typePopoverCleanup(); _typePopoverCleanup = null; } };
+        pop.appendChild(item);
+      });
+
+      document.body.appendChild(pop);
+
+      // Position below the anchor
+      const rect = anchor.getBoundingClientRect();
+      const pw = pop.offsetWidth;
+      let left = rect.left;
+      if (left + pw > window.innerWidth - 8) left = window.innerWidth - pw - 8;
+      pop.style.top = (rect.bottom + 6) + 'px';
+      pop.style.left = left + 'px';
+
+      // Close on outside click
+      const close = (e) => { if (!pop.contains(e.target) && e.target !== anchor) { pop.remove(); document.removeEventListener('click', close); _typePopoverCleanup = null; } };
+      setTimeout(() => document.addEventListener('click', close), 0);
+      _typePopoverCleanup = () => document.removeEventListener('click', close);
+    }
+
+    async function patchField(id, field, value) {
+      try {
+        await supaFetch(`${TABLE}?id=eq.${id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ [field]: value || null }),
+        });
+        const proj = projects.find(p => p.id === id);
+        if (proj) proj[field] = value || null;
+        render();
+      } catch (err) {
+        alert('Save failed: ' + err.message);
+      }
+    }
+
+    function startEdit(el, id, field) {
+      if (el.contentEditable === 'true') return;
+      el.contentEditable = 'true';
+      el.classList.add('bg-blue-50', 'outline-none', 'rounded', 'px-1');
+      el.focus();
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      range.collapse(false);
+      window.getSelection().removeAllRanges();
+      window.getSelection().addRange(range);
+      const original = el.textContent;
+      let saved = false;
+      const save = async () => {
+        if (saved) return;
+        saved = true;
+        el.contentEditable = 'false';
+        el.classList.remove('bg-blue-50');
+        const val = el.textContent.trim();
+        if (val !== original) await patchField(id, field, val);
+      };
+      el.addEventListener('blur', save, { once: true });
+      el.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); el.blur(); }
+        if (e.key === 'Escape') { el.textContent = original; el.contentEditable = 'false'; el.classList.remove('bg-blue-50'); saved = true; }
+      });
+    }
+
+    function editUrlCell(td, id, currentUrl) {
+      const input = document.createElement('input');
+      input.type = 'url';
+      input.value = currentUrl || '';
+      input.placeholder = 'https://...';
+      input.className = 'w-full text-xs border border-brand rounded px-1.5 py-1 focus:outline-none';
+      td.innerHTML = '';
+      td.appendChild(input);
+      input.focus();
+      input.select();
+      let saved = false;
+      const save = async () => {
+        if (saved) return; saved = true;
+        const val = input.value.trim();
+        if (val !== currentUrl) await patchField(id, 'live_url', val);
+        else render();
+      };
+      input.addEventListener('blur', save);
+      input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); input.blur(); } if (e.key === 'Escape') { render(); } });
+    }
+
+    // ─── Column Resize ───
+    function initColumnResize() {
+      const saved = JSON.parse(localStorage.getItem('col_widths') || '{}');
+      const ths = document.querySelectorAll('#tableView thead th');
+      ths.forEach((th, i) => {
+        th.style.position = 'relative';
+        if (saved[i]) th.style.width = saved[i];
+        if (i >= ths.length - 1) return;
+        // Remove old handle if re-initializing
+        th.querySelector('.col-resize')?.remove();
+        const handle = document.createElement('div');
+        handle.className = 'col-resize';
+        th.appendChild(handle);
+        let startX, startW;
+        handle.addEventListener('mousedown', e => {
+          startX = e.pageX;
+          startW = th.offsetWidth;
+          handle.classList.add('dragging');
+          const onMove = e2 => { th.style.width = Math.max(50, startW + e2.pageX - startX) + 'px'; };
+          const onUp = () => {
+            handle.classList.remove('dragging');
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+            const widths = {};
+            ths.forEach((t, idx) => { widths[idx] = t.style.width || t.offsetWidth + 'px'; });
+            localStorage.setItem('col_widths', JSON.stringify(widths));
+          };
+          document.addEventListener('mousemove', onMove);
+          document.addEventListener('mouseup', onUp);
+          e.preventDefault();
+        });
+      });
+    }
+
+    // ─── Inline Remarks ───
+    function markRemarksDirty(input) {
+      const btn = input.nextElementSibling;
+      if (input.value !== input.dataset.original) {
+        btn.classList.remove('hidden');
+      } else {
+        btn.classList.add('hidden');
+      }
+    }
+
+    async function saveRemarks(input) {
+      const id = input.dataset.id;
+      const value = input.value.trim();
+      const btn = input.nextElementSibling;
+      btn.textContent = '…';
+      btn.disabled = true;
+      try {
+        await supaFetch(`dashboard_projects?id=eq.${id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ remarks: value || null }),
+        });
+        input.dataset.original = value;
+        btn.classList.add('hidden');
+        btn.textContent = 'Save';
+        btn.disabled = false;
+        // Update local cache
+        const proj = projects.find(p => p.id === id);
+        if (proj) proj.remarks = value || null;
+      } catch (err) {
+        btn.textContent = 'Save';
+        btn.disabled = false;
+        alert('Failed to save: ' + err.message);
+      }
     }
 
     // ─── Selection ───
@@ -498,22 +769,27 @@
           ${thumb}
           <div class="p-4">
             <div class="flex items-start justify-between mb-2">
-              <h3 class="font-bold text-gray-900 text-sm leading-tight">${escapeHtml(p.name)}</h3>
-              <div class="flex gap-1 ml-2 shrink-0">
-                <button onclick="openEditModal('${p.id}')" class="text-gray-400 hover:text-brand p-1" title="Edit">
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-                </button>
-                <button onclick="openDeleteModal('${p.id}')" class="text-gray-400 hover:text-red-500 p-1" title="Delete">
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                </button>
+              <div class="flex items-center gap-2 min-w-0">
+                ${typeIconHtml(p.type, p.id, 22)}
+                <h3 class="font-bold text-gray-900 text-sm leading-tight truncate">${escapeHtml(p.name)}</h3>
               </div>
+              <button onclick="openDeleteModal('${p.id}')" class="text-gray-400 hover:text-red-500 p-1 shrink-0" title="Delete">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+              </button>
             </div>
             <p class="text-xs text-gray-500 mb-3 line-clamp-2">${escapeHtml(p.description || 'No description')}</p>
             <div class="flex items-center gap-2 flex-wrap">
-              <span class="status-${p.status} text-[10px] sm:text-xs font-semibold px-2 py-0.5 rounded-full whitespace-nowrap">${statusLabel(p.status)}</span>
-              <span class="type-${p.type} text-[10px] sm:text-xs font-semibold px-2 py-0.5 rounded-full whitespace-nowrap">${typeLabel(p.type)}</span>
+              ${statusIconHtml(p.status, p.id, 20)}
             </div>
-            ${p.remarks ? `<p class="mt-2 text-[10px] text-gray-400 italic line-clamp-2">${escapeHtml(p.remarks)}</p>` : ''}
+            <div class="mt-2 flex items-center gap-1.5">
+              <input type="text" value="${escapeHtml(p.remarks || '')}" placeholder="Add remark…"
+                class="remarks-input text-[10px] text-gray-400 italic border border-transparent rounded px-1.5 py-0.5 w-full focus:border-brand focus:outline-none focus:bg-white focus:not-italic bg-transparent"
+                data-id="${p.id}" data-original="${escapeHtml(p.remarks || '')}"
+                oninput="markRemarksDirty(this)"
+                onkeydown="if(event.key==='Enter')saveRemarks(this)">
+              <button onclick="saveRemarks(this.previousElementSibling)" title="Save"
+                class="remarks-save hidden shrink-0 text-[10px] font-semibold text-white bg-brand hover:bg-blue-700 px-2 py-0.5 rounded transition-colors">Save</button>
+            </div>
             ${p.live_url ? `<a href="${escapeHtml(p.live_url)}" target="_blank" rel="noopener" class="mt-2 inline-flex items-center gap-1 text-xs text-brand font-semibold hover:underline">
               <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
               Visit
@@ -529,24 +805,34 @@
 
     function renderRow(p) {
       const checked = selectedIds.has(p.id) ? 'checked' : '';
+      const urlDisplay = p.live_url
+        ? `<a href="${escapeHtml(p.live_url)}" target="_blank" rel="noopener" class="editable-text text-xs text-brand hover:underline truncate block px-1" title="Click to edit">${escapeHtml(p.live_url.replace('https://',''))}</a>`
+        : `<span class="editable-text text-xs text-gray-300 px-1" title="Click to add URL">+ add url</span>`;
       return `
         <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors ${selectedIds.has(p.id) ? 'bg-blue-50' : ''}">
           <td class="px-3 py-3"><input type="checkbox" class="row-checkbox rounded" data-id="${p.id}" ${checked} onchange="toggleSelect('${p.id}')"></td>
+          <td class="px-3 py-3">${typeIconHtml(p.type, p.id, 26)}</td>
           <td class="px-3 py-3">
-            <div class="font-semibold text-sm text-gray-900 truncate">${escapeHtml(p.name)}</div>
-            <div class="text-xs text-gray-500 truncate">${escapeHtml(p.description || '')}</div>
+            <div class="editable-text font-semibold text-sm text-gray-900 truncate px-1" onclick="startEdit(this,'${p.id}','name')" title="Click to edit name">${escapeHtml(p.name)}</div>
+            <div class="editable-text text-xs text-gray-500 truncate px-1 mt-0.5" onclick="startEdit(this,'${p.id}','description')" title="Click to edit description">${escapeHtml(p.description || '')}</div>
           </td>
-          <td class="px-3 py-3"><span class="status-${p.status} text-xs font-semibold px-2 py-0.5 rounded-full whitespace-nowrap">${statusLabel(p.status)}</span></td>
-          <td class="px-3 py-3"><span class="type-${p.type} text-xs font-semibold px-2 py-0.5 rounded-full whitespace-nowrap">${typeLabel(p.type)}</span></td>
-          <td class="px-3 py-3">${p.live_url ? `<a href="${escapeHtml(p.live_url)}" target="_blank" rel="noopener" class="text-xs text-brand hover:underline truncate block">${escapeHtml(p.live_url.replace('https://', ''))}</a>` : '<span class="text-xs text-gray-300">—</span>'}</td>
-          <td class="px-3 py-3 text-xs text-gray-400 italic truncate" title="${escapeHtml(p.remarks || '')}">${escapeHtml(p.remarks || '—')}</td>
+          <td class="px-3 py-3">${statusIconHtml(p.status, p.id, 22)}</td>
+          <td class="px-3 py-3 cursor-pointer" onclick="editUrlCell(this,'${p.id}',${JSON.stringify(p.live_url||'')})">${urlDisplay}</td>
+          <td class="px-3 py-3">
+            <div class="flex items-center gap-1.5">
+              <input type="text" value="${escapeHtml(p.remarks || '')}" placeholder="Add remark…"
+                class="remarks-input text-xs text-gray-500 italic border border-transparent rounded px-1.5 py-1 w-full min-w-[120px] focus:border-brand focus:outline-none focus:bg-white bg-transparent"
+                data-id="${p.id}" data-original="${escapeHtml(p.remarks || '')}"
+                oninput="markRemarksDirty(this)"
+                onkeydown="if(event.key==='Enter')saveRemarks(this)">
+              <button onclick="saveRemarks(this.previousElementSibling)" title="Save"
+                class="remarks-save hidden shrink-0 text-[10px] font-semibold text-white bg-brand hover:bg-blue-700 px-2 py-0.5 rounded transition-colors">Save</button>
+            </div>
+          </td>
           <td class="px-3 py-3 text-xs text-gray-500">${escapeHtml(p.created_by || '—')}</td>
           <td class="px-3 py-3 text-xs text-gray-400">${timeAgo(p.updated_at)}</td>
           <td class="px-3 py-3">
-            <div class="flex gap-1">
-              <button onclick="openEditModal('${p.id}')" class="text-gray-400 hover:text-brand p-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button>
-              <button onclick="openDeleteModal('${p.id}')" class="text-gray-400 hover:text-red-500 p-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
-            </div>
+            <button onclick="openDeleteModal('${p.id}')" class="text-gray-400 hover:text-red-500 p-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
           </td>
         </tr>
       `;
@@ -578,9 +864,15 @@
       } else {
         gridEl.classList.add('hidden');
         tableEl.classList.remove('hidden');
-        tableBody.innerHTML = filtered.map(renderRow).join('');
+        try {
+          tableBody.innerHTML = filtered.map(renderRow).join('');
+        } catch(e) {
+          console.error('Render error:', e);
+          tableBody.innerHTML = `<tr><td colspan="9" class="px-4 py-8 text-center text-xs text-red-400">Render error: ${e.message}</td></tr>`;
+        }
         const selectAll = document.getElementById('selectAll');
         selectAll.checked = filtered.length > 0 && selectedIds.size === filtered.length;
+        initColumnResize();
       }
     }
 
@@ -589,7 +881,7 @@
       document.getElementById('editId').value = '';
       document.getElementById('modalTitle').textContent = 'Add Project';
       document.getElementById('projectForm').reset();
-      document.getElementById('formCreatedBy').value = currentUser ? currentUser.username : '';
+      document.getElementById('formCreatedBy').value = currentUser ? (currentUser.displayName || currentUser.email) : '';
       document.getElementById('modalOverlay').classList.add('active');
     }
 
