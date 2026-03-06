@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Utopia Dashboard | Project Tracker</title>
-  <meta name="description" content="Internal project dashboard for Utopia Ventures — track all projects, statuses, and deployments.">
+  <meta name="description" content="Internal project dashboard by Utopia AI — track all projects, statuses, and deployments.">
   <meta property="og:title" content="Utopia Dashboard | Project Tracker">
-  <meta property="og:description" content="Track all Utopia Ventures projects in one place.">
+  <meta property="og:description" content="Track all projects in one place — by Utopia AI.">
   <meta property="og:type" content="website">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>U</text></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -109,7 +109,7 @@
         <button onclick="document.getElementById('magicLinkSent').classList.add('hidden');document.getElementById('magicLinkForm').classList.remove('hidden')" class="mt-3 text-xs text-brand font-semibold hover:underline">Use a different email</button>
       </div>
 
-      <p class="text-[10px] text-gray-400 text-center mt-4">Utopia Ventures internal tool</p>
+      <p class="text-[10px] text-gray-400 text-center mt-4">by Utopia AI</p>
     </div>
   </div>
 
@@ -129,12 +129,11 @@
         </div>
       </div>
       <div class="flex items-center gap-3">
-        <span id="projectCount" class="text-sm text-gray-500 hidden sm:block"></span>
         <div class="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-1.5">
           <div class="w-6 h-6 bg-brand/10 rounded-full flex items-center justify-center">
             <span id="userInitial" class="text-xs font-bold text-brand"></span>
           </div>
-          <span id="userName" class="text-xs font-semibold text-gray-700 hidden sm:block"></span>
+          <span id="userName" class="text-xs font-semibold text-gray-700 hidden sm:block cursor-pointer hover:text-brand transition-colors" title="Click to edit name" onclick="editDisplayName()"></span>
           <button onclick="logout()" class="text-gray-400 hover:text-red-500 ml-1" title="Sign out">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
           </button>
@@ -146,8 +145,30 @@
     </div>
   </header>
 
+  <!-- Stats Bar -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 pt-4 pb-1">
+    <div class="flex items-center gap-5 flex-wrap">
+      <div class="flex items-center gap-1.5">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" fill="#22c55e"/><polyline points="7 12 10.5 15.5 17 9" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="text-xs font-semibold text-gray-600"><span id="statLive">0</span> Live</span>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" fill="#f59e0b"/><line x1="12" y1="12" x2="12" y2="7" stroke="white" stroke-width="2.5" stroke-linecap="round"/><line x1="12" y1="12" x2="16.5" y2="12" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg>
+        <span class="text-xs font-semibold text-gray-600"><span id="statBuilding">0</span> In Progress</span>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" fill="#ef4444"/><line x1="8" y1="8" x2="16" y2="16" stroke="white" stroke-width="2.5" stroke-linecap="round"/><line x1="16" y1="8" x2="8" y2="16" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg>
+        <span class="text-xs font-semibold text-gray-600"><span id="statAbandoned">0</span> Abandoned</span>
+      </div>
+      <div class="flex items-center gap-1.5 ml-auto">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2"><path d="M3 3h18v18H3z"/></svg>
+        <span class="text-xs font-semibold text-gray-400"><span id="statTotal">0</span> Total</span>
+      </div>
+    </div>
+  </div>
+
   <!-- Filters & View Toggle -->
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3">
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
       <div class="flex flex-wrap gap-2" id="statusFilters">
         <button class="filter-btn active px-3 py-1.5 rounded-full text-xs font-semibold border border-gray-200 transition-colors" data-filter="all">All</button>
@@ -155,8 +176,16 @@
         <button class="filter-btn px-3 py-1.5 rounded-full text-xs font-semibold border border-gray-200 transition-colors" data-filter="in_progress">In Progress</button>
         <button class="filter-btn px-3 py-1.5 rounded-full text-xs font-semibold border border-gray-200 transition-colors" data-filter="almost_done">Almost Done</button>
         <button class="filter-btn px-3 py-1.5 rounded-full text-xs font-semibold border border-gray-200 transition-colors" data-filter="abandoned">Abandoned</button>
+        <button id="starFilterBtn" onclick="toggleStarFilter()" class="px-3 py-1.5 rounded-full text-xs font-semibold border border-gray-200 transition-colors flex items-center gap-1">
+          <svg id="starFilterIcon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          Starred
+        </button>
       </div>
       <div class="flex items-center gap-2">
+        <button id="sortStarBtn" onclick="toggleSortByStar()" class="flex items-center gap-1.5 text-xs border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-500 font-medium hover:bg-gray-50 transition-colors" title="Sort by starred">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          Sort ★
+        </button>
         <select id="typeFilter" class="text-xs border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-600 font-medium">
           <option value="all">All Types</option>
           <option value="internal_software">Internal Software</option>
@@ -184,7 +213,7 @@
       <table class="w-full bg-white rounded-xl border border-gray-200 overflow-hidden table-fixed">
         <thead class="bg-gray-50 border-b border-gray-200">
           <tr>
-            <th class="w-10 px-3 py-3"><input type="checkbox" id="selectAll" class="rounded" title="Select all"></th>
+            <th class="w-10 px-3 py-3 text-center text-gray-400 text-xs" title="Star to bookmark">★</th>
             <th class="w-10 px-3 py-3" title="Type"></th>
             <th class="text-left text-xs font-semibold text-gray-500 px-3 py-3 w-[200px]">Project</th>
             <th class="text-left text-xs font-semibold text-gray-500 px-3 py-3 w-[100px]">Status</th>
@@ -203,16 +232,6 @@
     </div>
   </main>
 
-  <!-- Bulk Action Bar (fixed bottom) -->
-  <div id="bulkBar" class="bulk-bar fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-40">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
-      <span id="bulkCount" class="text-sm font-semibold text-gray-700"></span>
-      <div class="flex items-center gap-2">
-        <button onclick="clearSelection()" class="border border-gray-200 text-gray-600 px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-gray-50 transition-colors">Cancel</button>
-        <button onclick="bulkDelete()" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors">Delete Selected</button>
-      </div>
-    </div>
-  </div>
 
   <!-- Add/Edit Modal -->
   <div id="modalOverlay" class="modal-overlay fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onclick="if(event.target===this)closeModal()">
@@ -297,8 +316,9 @@
     let currentTypeFilter = 'all';
     let searchQuery = '';
     let deleteTargetId = null;
-    let selectedIds = new Set();
     let currentUser = null;
+    let sortByStar = false;
+    let starFilter = false;
 
     // ─── Supabase Auth (client) ───
     const _supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -355,14 +375,17 @@
     }
 
     // Listen for auth state changes — single source of truth
-    _supa.auth.onAuthStateChange((event, session) => {
+    _supa.auth.onAuthStateChange(async (event, session) => {
       if (session && session.user) {
         const u = session.user;
-        currentUser = {
-          id: u.id,
-          email: u.email,
-          displayName: u.user_metadata?.full_name || u.user_metadata?.name || u.email.split('@')[0],
-        };
+        const fallback = u.user_metadata?.full_name || u.user_metadata?.name || u.email.split('@')[0];
+        // Load saved display name from user_profiles
+        let displayName = fallback;
+        try {
+          const { data } = await _supa.from('user_profiles').select('display_name').eq('id', u.id).single();
+          if (data?.display_name) displayName = data.display_name;
+        } catch (_) {}
+        currentUser = { id: u.id, email: u.email, displayName };
         showDashboard();
       } else {
         currentUser = null;
@@ -417,17 +440,11 @@
       await loadProjects();
     }
 
-    async function deleteMultiple(ids) {
-      const filter = ids.map(id => `id.eq.${id}`).join(',');
-      await supaFetch(`${TABLE}?or=(${filter})`, { method: 'DELETE' });
-      selectedIds.clear();
-      updateBulkBar();
-      await loadProjects();
-    }
 
     // ─── Helpers ───
     function getFiltered() {
-      return projects.filter(p => {
+      let list = projects.filter(p => {
+        if (starFilter && !p.starred) return false;
         if (currentStatusFilter !== 'all' && p.status !== currentStatusFilter) return false;
         if (currentTypeFilter !== 'all' && p.type !== currentTypeFilter) return false;
         if (searchQuery) {
@@ -439,6 +456,10 @@
         }
         return true;
       });
+      if (sortByStar) {
+        list = [...list].sort((a, b) => (b.starred ? 1 : 0) - (a.starred ? 1 : 0));
+      }
+      return list;
     }
 
     function statusLabel(s) {
@@ -477,19 +498,19 @@
     };
     const TYPE_ORDER = ['internal_software','saas_software','landing_page','others'];
 
-    // ─── Status Icons ───
+    // ─── Status Icons — all use filled circle + white symbol ───
     const STATUS_ICONS = {
-      in_progress:  { label: 'In Progress',  color: '#92400e', bg: '#fef3c7', svg: '<circle cx="12" cy="12" r="9" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="12" x2="12" y2="6" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="12" x2="17" y2="12" stroke-width="2" stroke-linecap="round"/>' },
-      almost_done:  { label: 'Almost Done', color: '#3730a3', bg: '#e0e7ff', svg: '<circle cx="12" cy="12" r="9" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="12" x2="12" y2="6" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="12" x2="7" y2="12" stroke-width="2" stroke-linecap="round"/>' },
-      live:         { label: 'Live',         color: '#166534', bg: '#dcfce7', svg: '<circle cx="12" cy="12" r="9" fill="#22c55e" stroke="#22c55e" stroke-width="0"/><polyline points="7 12 10.5 15.5 17 9" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>' },
-      abandoned:    { label: 'Abandoned',    color: '#991b1b', bg: '#fee2e2', svg: '<circle cx="12" cy="12" r="9" fill="#ef4444" stroke="#ef4444" stroke-width="0"/><line x1="8" y1="8" x2="16" y2="16" stroke="white" stroke-width="2.5" stroke-linecap="round"/><line x1="16" y1="8" x2="8" y2="16" stroke="white" stroke-width="2.5" stroke-linecap="round"/>' },
+      in_progress:  { label: 'In Progress',  color: '#92400e', bg: '#fef3c7', svg: '<circle cx="12" cy="12" r="10" fill="#f59e0b"/><line x1="12" y1="12" x2="12" y2="7" stroke="white" stroke-width="2.5" stroke-linecap="round"/><line x1="12" y1="12" x2="16.5" y2="12" stroke="white" stroke-width="2.5" stroke-linecap="round"/>' },
+      almost_done:  { label: 'Almost Done',  color: '#3730a3', bg: '#e0e7ff', svg: '<circle cx="12" cy="12" r="10" fill="#6366f1"/><line x1="12" y1="12" x2="12" y2="7" stroke="white" stroke-width="2.5" stroke-linecap="round"/><line x1="12" y1="12" x2="7.5" y2="12" stroke="white" stroke-width="2.5" stroke-linecap="round"/>' },
+      live:         { label: 'Live',         color: '#166534', bg: '#dcfce7', svg: '<circle cx="12" cy="12" r="10" fill="#22c55e"/><polyline points="7 12 10.5 15.5 17 9" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>' },
+      abandoned:    { label: 'Abandoned',    color: '#991b1b', bg: '#fee2e2', svg: '<circle cx="12" cy="12" r="10" fill="#ef4444"/><line x1="8" y1="8" x2="16" y2="16" stroke="white" stroke-width="2.5" stroke-linecap="round"/><line x1="16" y1="8" x2="8" y2="16" stroke="white" stroke-width="2.5" stroke-linecap="round"/>' },
     };
     const STATUS_ORDER = ['in_progress','almost_done','live','abandoned'];
 
     function statusIconHtml(status, id, size = 22) {
       const s = STATUS_ICONS[status] || STATUS_ICONS.in_progress;
       return `<div onclick="event.stopPropagation();openStatusPopover('${id}','${status}',this)" title="${s.label}" style="width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
-        <svg width="${size}" height="${size}" fill="none" stroke="${s.color}" viewBox="0 0 24 24">${s.svg}</svg>
+        <svg width="${size}" height="${size}" fill="none" viewBox="0 0 24 24">${s.svg}</svg>
       </div>`;
     }
 
@@ -577,14 +598,100 @@
       try {
         await supaFetch(`${TABLE}?id=eq.${id}`, {
           method: 'PATCH',
-          body: JSON.stringify({ [field]: value || null }),
+          body: JSON.stringify({ [field]: value === '' ? null : value }),
         });
         const proj = projects.find(p => p.id === id);
-        if (proj) proj[field] = value || null;
+        if (proj) proj[field] = value === '' ? null : value;
         render();
       } catch (err) {
         alert('Save failed: ' + err.message);
       }
+    }
+
+    // ─── Star ───
+    function starIconHtml(p, size = 20) {
+      const isStarred = p.starred;
+      const fill = isStarred ? '#f59e0b' : 'none';
+      const stroke = isStarred ? '#f59e0b' : '#d1d5db';
+      return `<button onclick="event.stopPropagation();toggleStar('${p.id}',${isStarred})" title="${isStarred ? 'Unstar' : 'Star'}" style="width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;background:none;border:none;padding:0;transition:transform 0.1s" onmouseenter="this.style.transform='scale(1.3)'" onmouseleave="this.style.transform='scale(1)'">
+        <svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      </button>`;
+    }
+
+    async function toggleStar(id, currentlyStarred) {
+      const proj = projects.find(p => p.id === id);
+      if (!proj) return;
+      proj.starred = !currentlyStarred;
+      render();
+      try {
+        await supaFetch(`${TABLE}?id=eq.${id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ starred: !currentlyStarred }),
+        });
+      } catch (err) {
+        proj.starred = currentlyStarred;
+        render();
+      }
+    }
+
+    function toggleStarFilter() {
+      starFilter = !starFilter;
+      const btn = document.getElementById('starFilterBtn');
+      const icon = document.getElementById('starFilterIcon');
+      if (starFilter) {
+        btn.classList.add('active');
+        icon.setAttribute('fill', '#f59e0b');
+        icon.setAttribute('stroke', '#f59e0b');
+      } else {
+        btn.classList.remove('active');
+        icon.setAttribute('fill', 'none');
+        icon.setAttribute('stroke', '#9ca3af');
+      }
+      render();
+    }
+
+    function toggleSortByStar() {
+      sortByStar = !sortByStar;
+      const btn = document.getElementById('sortStarBtn');
+      btn.classList.toggle('bg-amber-50', sortByStar);
+      btn.classList.toggle('border-amber-300', sortByStar);
+      btn.classList.toggle('text-amber-600', sortByStar);
+      render();
+    }
+
+    // ─── Editable Display Name ───
+    async function editDisplayName() {
+      const nameEl = document.getElementById('userName');
+      const current = nameEl.textContent;
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = current;
+      input.className = 'text-xs font-semibold text-gray-700 border border-brand rounded px-1.5 py-0.5 w-24 focus:outline-none';
+      nameEl.replaceWith(input);
+      input.focus();
+      input.select();
+      const save = async () => {
+        const val = input.value.trim() || current;
+        const newEl = document.createElement('span');
+        newEl.id = 'userName';
+        newEl.className = 'text-xs font-semibold text-gray-700 hidden sm:block cursor-pointer hover:text-brand transition-colors';
+        newEl.title = 'Click to edit name';
+        newEl.onclick = editDisplayName;
+        newEl.textContent = val;
+        input.replaceWith(newEl);
+        if (val !== current) {
+          currentUser.displayName = val;
+          document.getElementById('userInitial').textContent = val[0].toUpperCase();
+          try {
+            await _supa.from('user_profiles').upsert({ id: currentUser.id, display_name: val }, { onConflict: 'id' });
+          } catch (err) { console.warn('Failed to save display name:', err); }
+        }
+      };
+      input.addEventListener('blur', save);
+      input.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+        if (e.key === 'Escape') { input.value = current; input.blur(); }
+      });
     }
 
     function startEdit(el, id, field) {
@@ -704,58 +811,16 @@
       }
     }
 
-    // ─── Selection ───
-    function toggleSelect(id) {
-      if (selectedIds.has(id)) selectedIds.delete(id);
-      else selectedIds.add(id);
-      updateBulkBar();
-      updateCheckboxes();
-    }
 
-    function toggleSelectAll() {
-      const filtered = getFiltered();
-      if (selectedIds.size === filtered.length) {
-        selectedIds.clear();
-      } else {
-        filtered.forEach(p => selectedIds.add(p.id));
-      }
-      updateBulkBar();
-      render();
-    }
-
-    function clearSelection() {
-      selectedIds.clear();
-      updateBulkBar();
-      render();
-    }
-
-    function updateBulkBar() {
-      const bar = document.getElementById('bulkBar');
-      const count = document.getElementById('bulkCount');
-      if (selectedIds.size > 0) {
-        bar.classList.add('active');
-        count.textContent = `${selectedIds.size} project${selectedIds.size > 1 ? 's' : ''} selected`;
-      } else {
-        bar.classList.remove('active');
-      }
-    }
-
-    function updateCheckboxes() {
-      document.querySelectorAll('.row-checkbox').forEach(cb => {
-        cb.checked = selectedIds.has(cb.dataset.id);
-      });
-      const selectAll = document.getElementById('selectAll');
-      const filtered = getFiltered();
-      if (selectAll) selectAll.checked = filtered.length > 0 && selectedIds.size === filtered.length;
-    }
-
-    async function bulkDelete() {
-      if (selectedIds.size === 0) return;
-      const count = selectedIds.size;
-      document.getElementById('deleteTitle').textContent = `Delete ${count} project${count > 1 ? 's' : ''}?`;
-      document.getElementById('deleteDesc').textContent = `This will permanently delete ${count} project${count > 1 ? 's' : ''}. Cannot be undone.`;
-      deleteTargetId = 'bulk';
-      document.getElementById('deleteOverlay').classList.add('active');
+    // ─── Stats ───
+    function updateStats() {
+      const live = projects.filter(p => p.status === 'live').length;
+      const building = projects.filter(p => p.status === 'in_progress' || p.status === 'almost_done').length;
+      const abandoned = projects.filter(p => p.status === 'abandoned').length;
+      document.getElementById('statLive').textContent = live;
+      document.getElementById('statBuilding').textContent = building;
+      document.getElementById('statAbandoned').textContent = abandoned;
+      document.getElementById('statTotal').textContent = projects.length;
     }
 
     // ─── Rendering ───
@@ -773,9 +838,10 @@
                 ${typeIconHtml(p.type, p.id, 22)}
                 <h3 class="font-bold text-gray-900 text-sm leading-tight truncate">${escapeHtml(p.name)}</h3>
               </div>
-              <button onclick="openDeleteModal('${p.id}')" class="text-gray-400 hover:text-red-500 p-1 shrink-0" title="Delete">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-              </button>
+              <div class="flex items-center gap-1 shrink-0">
+                ${starIconHtml(p, 16)}
+                ${(!p.user_id || p.user_id === currentUser?.id) ? `<button onclick="openDeleteModal('${p.id}')" class="text-gray-400 hover:text-red-500 p-1" title="Delete"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>` : ''}
+              </div>
             </div>
             <p class="text-xs text-gray-500 mb-3 line-clamp-2">${escapeHtml(p.description || 'No description')}</p>
             <div class="flex items-center gap-2 flex-wrap">
@@ -804,13 +870,13 @@
     }
 
     function renderRow(p) {
-      const checked = selectedIds.has(p.id) ? 'checked' : '';
+      const canDelete = !p.user_id || p.user_id === currentUser?.id;
       const urlDisplay = p.live_url
         ? `<a href="${escapeHtml(p.live_url)}" target="_blank" rel="noopener" class="editable-text text-xs text-brand hover:underline truncate block px-1" title="Click to edit">${escapeHtml(p.live_url.replace('https://',''))}</a>`
         : `<span class="editable-text text-xs text-gray-300 px-1" title="Click to add URL">+ add url</span>`;
       return `
-        <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors ${selectedIds.has(p.id) ? 'bg-blue-50' : ''}">
-          <td class="px-3 py-3"><input type="checkbox" class="row-checkbox rounded" data-id="${p.id}" ${checked} onchange="toggleSelect('${p.id}')"></td>
+        <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+          <td class="px-3 py-3 text-center">${starIconHtml(p, 18)}</td>
           <td class="px-3 py-3">${typeIconHtml(p.type, p.id, 26)}</td>
           <td class="px-3 py-3">
             <div class="editable-text font-semibold text-sm text-gray-900 truncate px-1" onclick="startEdit(this,'${p.id}','name')" title="Click to edit name">${escapeHtml(p.name)}</div>
@@ -832,7 +898,7 @@
           <td class="px-3 py-3 text-xs text-gray-500">${escapeHtml(p.created_by || '—')}</td>
           <td class="px-3 py-3 text-xs text-gray-400">${timeAgo(p.updated_at)}</td>
           <td class="px-3 py-3">
-            <button onclick="openDeleteModal('${p.id}')" class="text-gray-400 hover:text-red-500 p-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+            ${canDelete ? `<button onclick="openDeleteModal('${p.id}')" class="text-gray-400 hover:text-red-500 p-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>` : ''}
           </td>
         </tr>
       `;
@@ -844,9 +910,7 @@
       const tableEl = document.getElementById('tableView');
       const tableBody = document.getElementById('tableBody');
       const emptyEl = document.getElementById('emptyState');
-      const countEl = document.getElementById('projectCount');
-
-      countEl.textContent = `${filtered.length} of ${projects.length} projects`;
+      updateStats();
 
       if (filtered.length === 0) {
         gridEl.classList.add('hidden');
@@ -870,8 +934,6 @@
           console.error('Render error:', e);
           tableBody.innerHTML = `<tr><td colspan="9" class="px-4 py-8 text-center text-xs text-red-400">Render error: ${e.message}</td></tr>`;
         }
-        const selectAll = document.getElementById('selectAll');
-        selectAll.checked = filtered.length > 0 && selectedIds.size === filtered.length;
         initColumnResize();
       }
     }
@@ -920,11 +982,7 @@
     async function confirmDelete() {
       if (!deleteTargetId) return;
       try {
-        if (deleteTargetId === 'bulk') {
-          await deleteMultiple([...selectedIds]);
-        } else {
-          await deleteProject(deleteTargetId);
-        }
+        await deleteProject(deleteTargetId);
       } catch (e) {
         alert('Error deleting: ' + e.message);
       }
@@ -933,8 +991,9 @@
 
     async function handleSubmit(e) {
       e.preventDefault();
+      const editId = document.getElementById('editId').value;
       const project = {
-        id: document.getElementById('editId').value || undefined,
+        id: editId || undefined,
         name: document.getElementById('formName').value.trim(),
         description: document.getElementById('formDesc').value.trim() || null,
         status: document.getElementById('formStatus').value,
@@ -943,6 +1002,7 @@
         thumbnail_url: document.getElementById('formThumb').value.trim() || null,
         remarks: document.getElementById('formRemarks').value.trim() || null,
         created_by: document.getElementById('formCreatedBy').value.trim() || null,
+        ...(!editId && { user_id: currentUser?.id || null }),
       };
       try {
         await saveProject(project);
@@ -984,8 +1044,6 @@
         render();
       });
     });
-
-    document.getElementById('selectAll').addEventListener('change', toggleSelectAll);
 
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') { closeModal(); closeDeleteModal(); }
